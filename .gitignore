@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Build files
+build/
+bin/
+*.o
+*.out
+
+# IDE files
+.vscode/
+.idea/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc
