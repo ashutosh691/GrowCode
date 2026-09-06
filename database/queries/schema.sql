@@ -73,3 +73,17 @@ create table execution_results (
     foreign key (submission_id) references submissions(submission_id) on delete cascade
 );
 
+/* this is user progress table
+this determines which user has solved which q by checking all possible combination of user_id and problem_id
+*/
+create table user_progress (
+    progress_id int auto_increment primary key, user_id int not null,
+    problem_id int not null, attempts int not null default 0,
+    solved boolean not null default false, last_submission_id int null,
+    updated_at timestamp default current_timestamp on update current_timestamp,
+
+    foreign key (user_id) references users(user_id) on delete cascade,
+    foreign key (problem_id) references problems(problem_id) on delete cascade,
+    foreign key (last_submission_id) references submissions(submission_id) on delete set null,
+    unique (user_id, problem_id) /*combination is req to be unique*/
+);
