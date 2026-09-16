@@ -3,12 +3,9 @@
 
 #include <string>
 
-struct Problem {
+struct Problem{
     int problem_id;
-    std::string title;
-    std::string description;
-    std::string difficulty;
-    std::string constraints;
+    std::string title , description , difficulty , constraints;
 };
 
 #endif
