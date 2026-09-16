@@ -3,10 +3,9 @@
 
 #include <string>
 
-struct TestCase {
+struct TestCase{
     int testCaseId;
-    std::string input;
-    std::string expectedOutput;
+    std::string input , expectedOutput;
     bool isSample;
 };
 
