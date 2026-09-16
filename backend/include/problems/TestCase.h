@@ -1,19 +1,12 @@
 #ifndef TEST_CASE_H
-
 #define TEST_CASE_H
 
 #include <string>
 
-struct TestCase {
-
+struct TestCase{
     int testCaseId;
-
-    std::string input;
-
-    std::string expectedOutput;
-
+    std::string input , expectedOutput;
     bool isSample;
-
 };
 
 #endif
