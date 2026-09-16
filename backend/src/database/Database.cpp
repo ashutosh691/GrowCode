@@ -12,11 +12,7 @@ Database::Database(
     const std::string& database //Name of the database
 )
    //Initialize the class variables with the given values
-    : host(host),
-      port(port),
-      username(username),
-      password(password),
-      database(database)
+    : host(host), port(port), username(username), password(password), database(database)
 {
     //try block contains the code that may cause a connection error
     try {
@@ -24,27 +20,39 @@ Database::Database(
         mysqlx::Session session(
             host, //Server address
             port,  //Port number
-            username,
-            password 
+            username, password 
         );
    //Select the database that we want to use
         session.sql("USE " + database).execute();
    //Display a success message if the connection works
-        std::cout
-            << "Connected to MySQL database: "
-            << database
-            << std::endl;
+        std::cout << "Connected to MySQL database: " << database << std::endl;
     }
     //catch block handles MySQL connection errors
     catch (const mysqlx::Error& e) {
         // Display the error message
-        std::cerr
-            << "Database connection failed: "
-            << e.what()
-            << std::endl;
+        std::cerr << "Database connection failed: " << e.what() << std::endl;
 //Send the error back to the program
         throw;
     }
 }
 
+//Checks whether the database connection is successful
+bool Database::isConnected()
+{
+    try {
+        //Create a MySQL session using the given login details
+        mysqlx::Session session(host, port, username, password);
 
+        //Select the database that we want to use
+        session.sql("USE " + database).execute();
+
+        //Run a simple query to check whether the connection works
+        session.sql("SELECT 1").execute();
+
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
