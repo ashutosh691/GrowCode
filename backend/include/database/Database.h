@@ -1,7 +1,10 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include <string> //used to store text values like username and password
+#include "problems/Problem.h"
+#include "problems/TestCase.h"
+#include <string> 
+#include<vector>
 //database class is used to store database connection details
 class Database {
 private:
@@ -23,6 +26,11 @@ public:
     // Checks whether the database connection is successful and returns true if connected, otherwise false
     
     bool isConnected();
+
+    // functions to retrieve problems and test cases from the database
+    std::vector<Problem> getProblems();
+    Problem getProblem(int problem_id);
+    std::vector<TestCase> getTestCases(int problemId);
 };
 
 #endif
