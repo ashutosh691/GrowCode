@@ -153,3 +153,30 @@ std::vector<TestCase> Database::getTestCases(int problemId) {
     }
     return testCases;
 }
+
+
+// function to create submission for user 
+int Database::createSubmission(int userId, int problemId, int languageId, const std::string& code) {
+    try {
+        mysqlx::Session session( host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        // query to save the submitted code of the user in the database
+        auto result = session.sql(
+            "INSERT INTO submissions "
+            "(user_id, problem_id, language_id, code, status) "
+            "VALUES (?, ?, ?, ?, 'PENDING')"
+        )
+        .bind(userId)
+        .bind(problemId)
+        .bind(languageId)
+        .bind(code)
+        .execute(); // binding received values respectively
+
+        return static_cast<int>(result.getAutoIncrementValue()); // returns the auto generated submission id
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr << "Submission creation failed: " << e.what() << std::endl;
+        return -1;
+    }
+}
