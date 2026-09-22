@@ -171,9 +171,9 @@ http://localhost:8080
 - Database schema designed
 - `queries.sql` created
 - MySQL database and tables created
+- C++ database connection
 
 ### Pending
-- C++ database connection
 - Backend API development
 - Authentication implementation
 - Frontend implementation
