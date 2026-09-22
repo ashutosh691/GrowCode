@@ -31,10 +31,12 @@ public:
     std::vector<Problem> getProblems();
     Problem getProblem(int problem_id);
     std::vector<TestCase> getTestCases(int problemId);
-
     
     // func to create a new submission by a user
     int createSubmission(int userId, int problemId, int languageId, const std::string& code);
+
+    //function for job creation i.e. submit
+    bool createJob(int submissionId);
 };
 
 #endif
