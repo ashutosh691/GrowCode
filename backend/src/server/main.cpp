@@ -9,7 +9,7 @@ int main()
         "127.0.0.1",        //MySQL server address
         33060,               //MySQL X Protocol port
         "root",              //MySQL username
-        "Ashutosh280705",     //MySQL password
+        "Password",     //MySQL password
         "growcode_app"       //Database name
     );
 
@@ -24,8 +24,8 @@ int main()
        return 1;
    }
 
-   //Test createSubmission() function
-   std::cout << "\nTesting createSubmission():" << std::endl;
+   //Create a submission to get a valid submission ID
+   std::cout << "\nCreating a submission for job testing:" << std::endl;
 
    int submissionId = database.createSubmission(
        1,                          //user ID
@@ -41,15 +41,30 @@ int main()
        "}"                           //source code
    );
 
-   //Check whether submission was created successfully
-   if (submissionId != -1)
+   //Check whether the submission was created successfully
+   if (submissionId == -1)
    {
-       std::cout << "Submission created successfully." << std::endl;
-       std::cout << "Submission ID: " << submissionId << std::endl;
+       std::cout << "Submission creation failed." << std::endl;
+       return 1;
+   }
+
+   std::cout << "Submission created successfully." << std::endl;
+   std::cout << "Submission ID: " << submissionId << std::endl;
+
+   //Test createJob() function
+   std::cout << "\nTesting createJob():" << std::endl;
+
+   bool jobCreated = database.createJob(submissionId);
+
+   //Check whether the job was created successfully
+   if (jobCreated)
+   {
+       std::cout << "Job created successfully." << std::endl;
+       std::cout << "Job is now in QUEUED status." << std::endl;
    }
    else
    {
-       std::cout << "Submission creation failed." << std::endl;
+       std::cout << "Job creation failed." << std::endl;
    }
 
    return 0;
