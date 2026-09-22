@@ -180,3 +180,43 @@ int Database::createSubmission(int userId, int problemId, int languageId, const 
         return -1;
     }
 }
+
+// function to create a job for a submission
+bool Database::createJob(int submissionId) {
+    try {
+        // create a session to connect with the database
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        // select the database to work with
+        session.sql("USE " + database).execute();
+
+        // query to create a job for the submitted code
+        // the job is initially placed in QUEUED status
+        // priority is set to 0 by default
+        session.sql(
+            "INSERT INTO jobs "
+            "(submission_id, status, priority) "
+            "VALUES (?, 'QUEUED', 0)"
+        )
+        .bind(submissionId) // bind the submission ID to the query
+        .execute();
+
+        // return true if the job was created successfully
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if job creation fails
+        std::cerr
+            << "Job creation failed: "
+            << e.what()
+            << std::endl;
+
+        // return false when job creation fails
+        return false;
+    }
+}
