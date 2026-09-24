@@ -17,81 +17,151 @@ int main()
     // Check database connection
     if (database.isConnected())
     {
-        std::cout << "Database connection test successful." << std::endl;
+        std::cout
+            << "Database connection test successful."
+            << std::endl;
     }
     else
     {
-        std::cout << "Database connection test failed." << std::endl;
+        std::cout
+            << "Database connection test failed."
+            << std::endl;
+
         return 1;
     }
 
-    // Test 1: Get all queued submission IDs
-    std::cout << "\nTesting getQueuedSubmissionIds():" << std::endl;
-
-    std::vector<int> queuedSubmissionIds = database.getQueuedSubmissionIds();
+    // Get queued submissions
+    std::vector<int> queuedSubmissionIds =
+        database.getQueuedSubmissionIds();
 
     if (queuedSubmissionIds.empty())
     {
-        std::cout << "No queued submissions found." << std::endl;
+        std::cout
+            << "\nNo queued submissions found."
+            << std::endl;
+
         return 0;
     }
 
-    std::cout << "Queued Submission IDs:" << std::endl;
-
-    for (int id : queuedSubmissionIds)
-    {
-        std::cout << id << std::endl;
-    }
-
-    // Use the first queued submission for the next tests
+    // Use the first queued submission
     int submissionId = queuedSubmissionIds[0];
 
-    std::cout << "\nUsing Submission ID: "
-              << submissionId << std::endl;
+    std::cout
+        << "\nUsing Submission ID: "
+        << submissionId
+        << std::endl;
 
-    // Test 2: Get submission code
-    std::cout << "\nTesting getSubmissionCode():" << std::endl;
+    // Test 1: updateSubmissionStatus()
 
-    std::string code =
-        database.getSubmissionCode(submissionId);
+    std::cout << "\nTesting updateSubmissionStatus():" << std::endl;
 
-    if (!code.empty())
+    bool submissionUpdated =
+        database.updateSubmissionStatus(
+            submissionId,
+            "RUNNING"
+        );
+
+    if (submissionUpdated)
     {
-        std::cout << "Submitted Code:" << std::endl;
-        std::cout << code << std::endl;
+        std::cout
+            << "Submission status updated successfully."
+            << std::endl;
     }
     else
     {
-        std::cout << "Submission code not found." << std::endl;
+        std::cout
+            << "Failed to update submission status."
+            << std::endl;
     }
 
-    // Test 3: Get problem ID
-    std::cout << "\nTesting getSubmissionProblemId():" << std::endl;
+    // Test 2: updateJobStatus()
+
+    std::cout << "\nTesting updateJobStatus():" << std::endl;
+
+    bool jobUpdated =
+        database.updateJobStatus(
+            submissionId,
+            "RUNNING"
+        );
+
+    if (jobUpdated)
+    {
+        std::cout
+            << "Job status updated successfully."
+            << std::endl;
+    }
+    else
+    {
+        std::cout
+            << "Failed to update job status."
+            << std::endl;
+    }
+
+    // Get problem ID for the submission
 
     int problemId =
         database.getSubmissionProblemId(submissionId);
 
-    if (problemId != -1)
+    if (problemId == -1)
     {
-        std::cout << "Problem ID: " << problemId << std::endl;
+        std::cout
+            << "Could not find problem ID."
+            << std::endl;
+
+        return 1;
+    }
+
+    std::cout
+        << "\nProblem ID: "
+        << problemId
+        << std::endl;
+
+    // Get test cases for the problem
+
+    std::vector<TestCase> testCases =
+        database.getTestCases(problemId);
+
+    if (testCases.empty())
+    {
+        std::cout
+            << "No test cases found for this problem."
+            << std::endl;
+
+        return 1;
+    }
+
+    int testCaseId = testCases[0].testCaseId;
+
+    std::cout
+        << "Using Test Case ID: "
+        << testCaseId
+        << std::endl;
+
+    // Test 3: saveExecutionResult()
+
+    std::cout << "\nTesting saveExecutionResult():" << std::endl;
+
+    bool resultSaved =
+        database.saveExecutionResult(
+            submissionId,
+            testCaseId,
+            "ACCEPTED",
+            "12",
+            15.5,
+            1024
+        );
+
+    if (resultSaved)
+    {
+        std::cout
+            << "Execution result saved successfully."
+            << std::endl;
     }
     else
     {
-        std::cout << "Problem ID not found." << std::endl;
-    }
-
-    // Test 4: Get language ID
-    std::cout << "\nTesting getSubmissionLanguageId():" << std::endl;
-
-    int languageId = database.getSubmissionLanguageId(submissionId);
-
-    if (languageId != -1)
-    {
-        std::cout << "Language ID: " << languageId << std::endl;
-    }
-    else
-    {
-        std::cout << "Language ID not found." << std::endl;
+        std::cout
+            << "Failed to save execution result."
+            << std::endl;
     }
 
     return 0;
