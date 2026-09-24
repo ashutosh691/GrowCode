@@ -49,6 +49,10 @@ public:
     int getSubmissionProblemId(int submissionId);
 
     int getSubmissionLanguageId(int submissionId);
+    // func for updation and save
+    bool updateSubmissionStatus(int submissionId, const std::string& status);
+    bool updateJobStatus(int submissionId, const std::string& status);
+    bool saveExecutionResult(int submissionId, int testCaseId, const std::string& status, const std::string& actualOutput, double timeTaken, long long memoryUsed);
 };
 
 #endif
