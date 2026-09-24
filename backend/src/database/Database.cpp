@@ -430,3 +430,35 @@ int Database::getSubmissionLanguageId(int submissionId) {
         return -1;
     }
 }
+
+// function to update the status of a submission
+bool Database::updateSubmissionStatus(int submissionId, const std::string& status) {
+    try {
+        // create a session to connect with the database
+        mysqlx::Session session(host, port, username, password);
+
+       // select the database to work with
+       session.sql("USE " + database).execute();
+
+        // query to update the submission status
+        session.sql(
+            "UPDATE submissions "
+            "SET status = ? "
+            "WHERE submission_id = ?"
+        )
+        .bind(status)          // bind the new status
+        .bind(submissionId)    // bind the submission ID
+        .execute();
+
+        // return true if the status was updated successfully
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if status update fails
+        std::cerr
+            << "Failed to update submission status: " << e.what() << std::endl;
+
+        // return false when an error occurs
+        return false;
+    }
+}
