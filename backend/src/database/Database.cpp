@@ -280,3 +280,153 @@ int Database::createSubmissionWithJob(int userId, int problemId, int languageId,
         return -1;
     }
 }
+
+// function to get all submission IDs whose jobs are currently queued
+std::vector<int> Database::getQueuedSubmissionIds() {
+    // vector to store the submission IDs
+    std::vector<int> submissionIds;
+
+    try {
+        // create a session to connect with the database
+        mysqlx::Session session(host, port, username, password);
+
+        // select the database to work with
+        session.sql("USE " + database).execute();
+
+        // query to get submission IDs of all queued jobs
+        // jobs are ordered according to their creation time
+        auto result = session.sql(
+            "SELECT submission_id "
+            "FROM jobs "
+            "WHERE status = 'QUEUED' "
+            "ORDER BY created_at, job_id"
+        ).execute();
+
+        // store each retrieved submission ID in the vector
+        for (auto row : result.fetchAll()) {
+            submissionIds.push_back(row[0].get<int>());
+        }
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if queued submissions cannot be retrieved
+        std::cerr
+            << "Get queued submissions error: " << e.what() << std::endl;
+    }
+
+    // return all queued submission IDs
+    return submissionIds;
+}
+
+// function to get the submitted code using submission ID
+std::string Database::getSubmissionCode(int submissionId) {
+    try {
+       // create a session to connect with the database
+       mysqlx::Session session(host, port, username, password);
+
+       // select the database to work with
+       session.sql("USE " + database).execute();
+
+        // query to retrieve the submitted code
+        auto result = session.sql(
+            "SELECT code "
+            "FROM submissions "
+            "WHERE submission_id = ?"
+        )
+        .bind(submissionId) // bind the submission ID to the query
+        .execute();
+
+        // fetch the retrieved row
+        auto row = result.fetchOne();
+
+        // return empty string if submission does not exist
+        if (row.isNull()) {
+            return "";
+        }
+
+        // return the submitted source code
+        return row[0].get<std::string>();
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if submission code cannot be retrieved
+        std::cerr << "Failed to get submission code: " << e.what() << std::endl;
+
+        // return empty string when an error occurs
+        return "";
+    }
+}
+
+// function to get the problem ID associated with a submission
+int Database::getSubmissionProblemId(int submissionId) {
+    try {
+        // create a session to connect with the database
+       mysqlx::Session session(host, port, username, password);
+
+       // select the database to work with
+       session.sql("USE " + database).execute();
+
+        // query to retrieve the problem ID of the submission
+        auto result = session.sql(
+            "SELECT problem_id "
+            "FROM submissions "
+            "WHERE submission_id = ?"
+        )
+        .bind(submissionId) // bind the submission ID to the query
+        .execute();
+
+        // fetch the retrieved row
+        auto row = result.fetchOne();
+
+        // return -1 if submission does not exist
+        if (row.isNull()) {
+            return -1;
+        }
+
+        // return the problem ID associated with the submission
+        return row[0].get<int>();
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if problem ID cannot be retrieved
+        std::cerr << "Failed to get submission problem: " << e.what() << std::endl;
+
+        // return -1 when an error occurs
+        return -1;
+    }
+}
+
+// function to get the language ID associated with a submission
+int Database::getSubmissionLanguageId(int submissionId) {
+    try {
+        // create a session to connect with the database
+       mysqlx::Session session(host, port, username, password);
+
+       // select the database to work with
+       session.sql("USE " + database).execute();
+
+        // query to retrieve the language ID of the submission
+        auto result = session.sql(
+            "SELECT language_id "
+            "FROM submissions "
+            "WHERE submission_id = ?"
+        )
+        .bind(submissionId) // bind the submission ID to the query
+        .execute();
+
+        // fetch the retrieved row
+        auto row = result.fetchOne();
+
+        // return -1 if submission does not exist
+        if (row.isNull()) {
+            return -1;
+        }
+
+        // return the language ID associated with the submission
+        return row[0].get<int>();
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if language ID cannot be retrieved
+        std::cerr << "Failed to get submission language: " << e.what() << std::endl;
+
+        // return -1 when an error occurs
+        return -1;
+    }
+}

@@ -40,6 +40,15 @@ public:
 
     // function to create a submission and its job together
     int createSubmissionWithJob(int userId, int problemId, int languageId, const std::string& code);
+
+    // func to retrieve submitted query
+    std::vector<int> getQueuedSubmissionIds();
+
+    std::string getSubmissionCode(int submissionId);
+
+    int getSubmissionProblemId(int submissionId);
+
+    int getSubmissionLanguageId(int submissionId);
 };
 
 #endif
