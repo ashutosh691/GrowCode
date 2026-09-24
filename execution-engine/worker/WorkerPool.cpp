@@ -38,9 +38,18 @@ void WorkerPool::workerThread() {
         }
 
         if (currentSubmissionId != -1) {
-            std::cout << "[Worker " << std::this_thread::get_id() 
-                      << "] Running Submission: " << currentSubmissionId << std::endl;
-            // Next: Connect to ProcessManager & ResourceManager
+            std::cout << "[Worker " << std::this_thread::get_id()<< "] Running Submission: " << currentSubmissionId << std::endl;
         }
     }
+}
+void WorkerPool::stop() {
+    {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        shouldStop = true;
+    }
+    cv.notify_all(); 
+    for (std::thread &worker : workers) {
+        if (worker.joinable()) worker.join();
+    }
+    workers.clear();
 }
