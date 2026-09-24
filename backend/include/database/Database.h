@@ -37,6 +37,9 @@ public:
 
     //function for job creation i.e. submit
     bool createJob(int submissionId);
+
+    // function to create a submission and its job together
+    int createSubmissionWithJob(int userId, int problemId, int languageId, const std::string& code);
 };
 
 #endif

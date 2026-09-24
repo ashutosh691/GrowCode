@@ -155,68 +155,128 @@ std::vector<TestCase> Database::getTestCases(int problemId) {
 }
 
 
-// function to create submission for user 
-int Database::createSubmission(int userId, int problemId, int languageId, const std::string& code) {
-    try {
-        mysqlx::Session session( host, port, username, password);
-        session.sql("USE " + database).execute();
+// // function to create submission for user 
+// int Database::createSubmission(int userId, int problemId, int languageId, const std::string& code) {
+//     try {
+//         mysqlx::Session session( host, port, username, password);
+//         session.sql("USE " + database).execute();
 
-        // query to save the submitted code of the user in the database
-        auto result = session.sql(
-            "INSERT INTO submissions "
-            "(user_id, problem_id, language_id, code, status) "
-            "VALUES (?, ?, ?, ?, 'PENDING')"
-        )
-        .bind(userId)
-        .bind(problemId)
-        .bind(languageId)
-        .bind(code)
-        .execute(); // binding received values respectively
+//         // query to save the submitted code of the user in the database
+//         auto result = session.sql(
+//             "INSERT INTO submissions "
+//             "(user_id, problem_id, language_id, code, status) "
+//             "VALUES (?, ?, ?, ?, 'PENDING')"
+//         )
+//         .bind(userId)
+//         .bind(problemId)
+//         .bind(languageId)
+//         .bind(code)
+//         .execute(); // binding received values respectively
 
-        return static_cast<int>(result.getAutoIncrementValue()); // returns the auto generated submission id
-    }
-    catch (const mysqlx::Error& e) {
-        std::cerr << "Submission creation failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
+//         return static_cast<int>(result.getAutoIncrementValue()); // returns the auto generated submission id
+//     }
+//     catch (const mysqlx::Error& e) {
+//         std::cerr << "Submission creation failed: " << e.what() << std::endl;
+//         return -1;
+//     }
+// }
 
-// function to create a job for a submission
-bool Database::createJob(int submissionId) {
+// // function to create a job for a submission
+// bool Database::createJob(int submissionId) {
+//     try {
+//         // create a session to connect with the database
+//         mysqlx::Session session(
+//             host,
+//             port,
+//             username,
+//             password
+//         );
+
+//         // select the database to work with
+//         session.sql("USE " + database).execute();
+
+//         // query to create a job for the submitted code
+//         // the job is initially placed in QUEUED status
+//         // priority is set to 0 by default
+//         session.sql(
+//             "INSERT INTO jobs "
+//             "(submission_id, status, priority) "
+//             "VALUES (?, 'QUEUED', 0)"
+//         )
+//         .bind(submissionId) // bind the submission ID to the query
+//         .execute();
+
+//         // return true if the job was created successfully
+//         return true;
+//     }
+//     catch (const mysqlx::Error& e) {
+//         // display the error if job creation fails
+//         std::cerr
+//             << "Job creation failed: "
+//             << e.what()
+//             << std::endl;
+
+//         // return false when job creation fails
+//         return false;
+//     }
+// }
+
+// combined above two functions for transaction handling
+// function to create a submission and its job together
+int Database::createSubmissionWithJob(int userId, int problemId, int languageId, const std::string& code) {
     try {
         // create a session to connect with the database
-        mysqlx::Session session(
-            host,
-            port,
-            username,
-            password
-        );
+        mysqlx::Session session(host, port, username, password);
 
         // select the database to work with
         session.sql("USE " + database).execute();
 
-        // query to create a job for the submitted code
-        // the job is initially placed in QUEUED status
-        // priority is set to 0 by default
-        session.sql(
-            "INSERT INTO jobs "
-            "(submission_id, status, priority) "
-            "VALUES (?, 'QUEUED', 0)"
-        )
-        .bind(submissionId) // bind the submission ID to the query
-        .execute();
+        // start a transaction so submission and job are treated as one operation
+        session.sql("START TRANSACTION").execute();
 
-        // return true if the job was created successfully
-        return true;
+        try {
+            // query to insert the submitted code into the submissions table
+            auto submissionResult = session.sql(
+                "INSERT INTO submissions "
+                "(user_id, problem_id, language_id, code, status) "
+                "VALUES (?, ?, ?, ?, 'PENDING')"
+            )
+            .bind(userId, problemId, languageId, code).execute();
+
+            // get the auto-generated submission ID
+            int submissionId = static_cast<int>(submissionResult.getAutoIncrementValue());
+
+            // query to create a job for the newly created submission
+            // the job is initially placed in QUEUED status
+            // priority is set to 0
+            session.sql(
+                "INSERT INTO jobs "
+                "(submission_id, status, priority) "
+                "VALUES (?, 'QUEUED', 0)"
+            )
+            .bind(submissionId) // bind the generated submission ID
+            .execute();
+
+            // save both operations permanently
+            session.sql("COMMIT").execute();
+
+            // return the generated submission ID
+            return submissionId;
+        }
+        catch (...) {
+            // undo all database changes if any operation fails
+            session.sql("ROLLBACK").execute();  // TRANSACTION handling
+
+            // pass the error to the outer catch block
+            throw;
+        }
     }
     catch (const mysqlx::Error& e) {
-        // display the error if job creation fails
+        // display the error if submission or job creation fails
         std::cerr
-            << "Job creation failed: "
-            << e.what()
-            << std::endl;
+            << "Submission and job creation failed: " << e.what() << std::endl;
 
-        // return false when job creation fails
-        return false;
+        // return -1 to indicate failure
+        return -1;
     }
 }
