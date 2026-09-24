@@ -455,8 +455,36 @@ bool Database::updateSubmissionStatus(int submissionId, const std::string& statu
     }
     catch (const mysqlx::Error& e) {
         // display the error if status update fails
-        std::cerr
-            << "Failed to update submission status: " << e.what() << std::endl;
+        std::cerr<< "Failed to update submission status: " << e.what() << std::endl;
+            
+        // return false when an error occurs
+        return false;
+    }
+}
+// function to update the status of a job
+bool Database::updateJobStatus(int submissionId, const std::string& status) {
+    try {
+        // create a session to connect with the database
+        mysqlx::Session session(host, port, username, password);
+
+        // select the database to work with
+        session.sql("USE " + database).execute();
+
+        // query to update the job status
+        session.sql(
+            "UPDATE jobs "
+            "SET status = ? "
+            "WHERE submission_id = ?"
+        )
+        .bind(status, submissionId) // bind status and submission ID
+        .execute();
+
+        // return true if the job status was updated successfully
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if job status update fails
+        std::cerr << "Update job status error: " << e.what() << std::endl;
 
         // return false when an error occurs
         return false;
