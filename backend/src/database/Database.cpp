@@ -490,3 +490,33 @@ bool Database::updateJobStatus(int submissionId, const std::string& status) {
         return false;
     }
 }
+// function to save the execution result of a test case
+bool Database::saveExecutionResult(int submissionId, int testCaseId, const std::string& status, const std::string& actualOutput, double timeTaken, long long memoryUsed) {
+    try {
+        // create a session to connect with the database
+        mysqlx::Session session(host, port, username, password);
+
+        // select the database to work with
+        session.sql("USE " + database).execute();
+
+        // query to save the execution result
+        session.sql(
+            "INSERT INTO execution_results "
+            "(submission_id, test_case_id, status, actual_output, "
+            "time_taken, memory_used) "
+            "VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind(submissionId, testCaseId, status, actualOutput, timeTaken, memoryUsed)
+        .execute();
+
+        // return true if the execution result was saved successfully
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if execution result cannot be saved
+        std::cerr << "Save execution result error: " << e.what() << std::endl;
+
+        // return false when an error occurs
+        return false;
+    }
+}
