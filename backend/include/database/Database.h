@@ -59,6 +59,8 @@ public:
     // function to get all submissions made by a specific user
     std::string getUserSubmissions(int userId);
 
+    // function to get progress of a specific user
+    std::string getUserProgress(int userId);
 };
 
 #endif

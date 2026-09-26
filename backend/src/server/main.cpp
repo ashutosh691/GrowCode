@@ -9,7 +9,7 @@ int main()
         "127.0.0.1",
         33060,
         "root",
-        "YOUR_PASSWORD",
+        "Password",
         "growcode_app"
     );
 
@@ -21,12 +21,13 @@ int main()
     else
     {
         std::cout << "Database connection test failed." << std::endl;
+
         return 1;
     }
 
     // Test 1: getSubmissionStatus()
 
-    int submissionId = 1;
+    int submissionId = 58;
     int userId = 1;
 
     std::cout << "\nTesting getSubmissionStatus():" << std::endl;
@@ -55,5 +56,13 @@ int main()
 
     std::cout << submissions << std::endl;
 
+    // Test 3: getUserProgress()
+    std::cout << "\nTesting getUserProgress():" << std::endl;
+
+    std::string progress = database.getUserProgress(userId);
+
+    std::cout << "User progress:" << std::endl;
+
+    std::cout << progress << std::endl;
     return 0;
 }

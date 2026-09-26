@@ -570,10 +570,10 @@ std::string Database::getSubmissionStatus(int submissionId, int userId) {
 std::string Database::getUserSubmissions(int userId) {
     try {
         // create a session to connect with the database
-       mysqlx::Session session(host, port, username, password);
+        mysqlx::Session session(host, port, username, password);
 
-       // select the database to work with
-       session.sql("USE " + database).execute();
+        // select the database to work with
+        session.sql("USE " + database).execute();
 
         // query to retrieve all submissions made by the user
         // problem and language details are retrieved using JOIN
@@ -621,5 +621,87 @@ std::string Database::getUserSubmissions(int userId) {
 
         // return an empty JSON array when an error occurs
         return "[]";
+    }
+}
+
+// function to get overall progress of a specific user
+std::string Database::getUserProgress(int userId) {
+    try {
+
+        // create a session to connect with the database
+        mysqlx::Session session(host, port, username, password);
+
+        // select the database to work with
+        session.sql("USE " + database).execute();
+
+        // query to calculate the overall progress of the user
+        // COUNT(DISTINCT ...) counts the number of unique problems solved
+        // COUNT(s.submission_id) counts the total number of submissions
+        // SUM(CASE ...) counts submissions based on their status
+        auto result = session.sql(
+            "SELECT "
+            "CAST(COUNT(DISTINCT CASE "
+            "WHEN s.status = 'ACCEPTED' "
+            "THEN s.problem_id END) AS UNSIGNED), "
+
+            "CAST(COUNT(s.submission_id) AS UNSIGNED), "
+
+            "CAST(COALESCE(SUM(CASE "
+            "WHEN s.status = 'ACCEPTED' "
+            "THEN 1 ELSE 0 END), 0) AS UNSIGNED), "
+
+            "CAST(COALESCE(SUM(CASE "
+            "WHEN s.status = 'WRONG_ANSWER' "
+            "THEN 1 ELSE 0 END), 0) AS UNSIGNED), "
+
+            "CAST(COALESCE(SUM(CASE "
+            "WHEN s.status = 'COMPILATION_ERROR' "
+            "THEN 1 ELSE 0 END), 0) AS UNSIGNED), "
+
+            "CAST(COALESCE(SUM(CASE "
+            "WHEN s.status = 'RUNTIME_ERROR' "
+            "THEN 1 ELSE 0 END), 0) AS UNSIGNED), "
+
+            "CAST(COALESCE(SUM(CASE "
+            "WHEN s.status = 'TIME_LIMIT_EXCEEDED' "
+            "THEN 1 ELSE 0 END), 0) AS UNSIGNED) "
+
+            // get submission data only for the specified user
+            "FROM submissions s "
+            "WHERE s.user_id = ?"
+        )
+        .bind(userId) // bind the user id to the query
+        .execute();
+
+        // fetch the single row containing the calculated progress
+        auto row = result.fetchOne();
+
+        // if no row is returned, return an empty JSON object
+        if (row.isNull()) {
+            return "{}";
+        }
+
+        // create a JSON object containing the user's progress
+        nlohmann::json progress = {
+            {"problems_solved", row[0].get<uint64_t>()},
+            {"total_attempts", row[1].get<uint64_t>()},
+            {"accepted", row[2].get<uint64_t>()},
+            {"wrong_answer", row[3].get<uint64_t>()},
+            {"compilation_error", row[4].get<uint64_t>()},
+            {"runtime_error", row[5].get<uint64_t>()},
+            {"time_limit_exceeded", row[6].get<uint64_t>()}
+        };
+
+        // convert the JSON object into a string
+        // this string can later be returned through the API
+        return progress.dump();
+    }
+    catch (const mysqlx::Error& e) {
+
+        // display the database error if the query fails
+        std::cerr << "Failed to get user progress: " << e.what() << std::endl;
+
+        // return an empty JSON object if an error occurs
+        return "{}";
     }
 }
