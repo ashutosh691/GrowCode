@@ -1,6 +1,7 @@
 #include"database/Database.h"  //Includes the Database class declaration
 #include<iostream> //Used for printing messages
 #include<mysqlx/xdevapi.h> //MySQL library used to connect to the database
+#include <nlohmann/json.hpp>
 
 //Constructor of the Database class which receives all the information needed to connect to MySQL
 
@@ -518,5 +519,107 @@ bool Database::saveExecutionResult(int submissionId, int testCaseId, const std::
 
         // return false when an error occurs
         return false;
+    }
+}
+
+
+// function to get the status of a submission for a specific user
+std::string Database::getSubmissionStatus(int submissionId, int userId) {
+    try {
+       // create a session to connect with the database
+       mysqlx::Session session(host, port, username, password);
+
+       // select the database to work with
+       session.sql("USE " + database).execute();
+
+        // query to retrieve the submission status
+        // submission must belong to the specified user
+        auto result = session.sql(
+            "SELECT status "
+            "FROM submissions "
+            "WHERE submission_id = ? "
+            "AND user_id = ?"
+        )
+        .bind(submissionId) // bind the submission ID
+        .bind(userId)       // bind the user ID
+        .execute();
+
+        // fetch the retrieved row
+        auto row = result.fetchOne();
+
+        // return empty string if submission does not exist
+        // or does not belong to this user
+        if (row.isNull()) {
+            return "";
+        }
+
+        // return the current submission status
+        return row[0].get<std::string>();
+    }
+    catch (const std::exception& e) {
+        // display the error if status cannot be retrieved
+        std::cerr
+            << "Failed to get submission status: " << e.what() << std::endl;
+
+        // return empty string when an error occurs
+        return "";
+    }
+}
+
+// function to get all submissions made by a specific user
+std::string Database::getUserSubmissions(int userId) {
+    try {
+        // create a session to connect with the database
+       mysqlx::Session session(host, port, username, password);
+
+       // select the database to work with
+       session.sql("USE " + database).execute();
+
+        // query to retrieve all submissions made by the user
+        // problem and language details are retrieved using JOIN
+        auto result = session.sql(
+            "SELECT "
+            "s.submission_id, "
+            "p.title, "
+            "l.name, "
+            "s.status, "
+            "DATE_FORMAT(s.submitted_at, '%Y-%m-%d %H:%i:%s') "
+            "FROM submissions s "
+            "JOIN problems p "
+            "ON s.problem_id = p.problem_id "
+            "JOIN languages l "
+            "ON s.language_id = l.language_id "
+            "WHERE s.user_id = ? "
+            "ORDER BY s.submitted_at DESC"
+        )
+        .bind(userId) // bind the user ID to the query
+        .execute();
+
+        // create an empty JSON array to store submissions
+        nlohmann::json submissions = nlohmann::json::array();
+
+        mysqlx::Row row;
+
+        // retrieve each submission row
+        while ((row = result.fetchOne())) {
+            // add submission details to the JSON array
+            submissions.push_back({
+                {"submission_id", row[0].get<int>()},
+                {"problem_title", row[1].get<std::string>()},
+                {"language", row[2].get<std::string>()},
+                {"status", row[3].get<std::string>()},
+                {"submitted_at", row[4].get<std::string>()}
+            });
+        }
+
+        // convert the JSON array into a string
+        return submissions.dump();
+    }
+    catch (const mysqlx::Error& e) {
+        // display the error if submissions cannot be retrieved
+        std::cerr << "Failed to get user submissions: " << e.what() << std::endl;
+
+        // return an empty JSON array when an error occurs
+        return "[]";
     }
 }

@@ -14,6 +14,7 @@ target_include_directories(growcode PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/backend/include
     /opt/homebrew/opt/mysql-connector-c++/include
+    /opt/homebrew/opt/nlohmann-json/include
 )
 
 target_link_libraries(growcode PRIVATE

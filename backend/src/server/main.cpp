@@ -1,5 +1,4 @@
 #include <iostream>
-#include <vector>
 
 #include "database/Database.h"
 
@@ -17,152 +16,44 @@ int main()
     // Check database connection
     if (database.isConnected())
     {
-        std::cout
-            << "Database connection test successful."
-            << std::endl;
+        std::cout << "Database connection test successful." << std::endl;
     }
     else
     {
-        std::cout
-            << "Database connection test failed."
-            << std::endl;
-
+        std::cout << "Database connection test failed." << std::endl;
         return 1;
     }
 
-    // Get queued submissions
-    std::vector<int> queuedSubmissionIds =
-        database.getQueuedSubmissionIds();
+    // Test 1: getSubmissionStatus()
 
-    if (queuedSubmissionIds.empty())
+    int submissionId = 1;
+    int userId = 1;
+
+    std::cout << "\nTesting getSubmissionStatus():" << std::endl;
+
+    std::string status =
+        database.getSubmissionStatus(submissionId, userId);
+
+    if (!status.empty())
     {
-        std::cout
-            << "\nNo queued submissions found."
-            << std::endl;
+        std::cout << "Submission ID: " << submissionId << std::endl;
 
-        return 0;
-    }
-
-    // Use the first queued submission
-    int submissionId = queuedSubmissionIds[0];
-
-    std::cout
-        << "\nUsing Submission ID: "
-        << submissionId
-        << std::endl;
-
-    // Test 1: updateSubmissionStatus()
-
-    std::cout << "\nTesting updateSubmissionStatus():" << std::endl;
-
-    bool submissionUpdated =
-        database.updateSubmissionStatus(
-            submissionId,
-            "RUNNING"
-        );
-
-    if (submissionUpdated)
-    {
-        std::cout
-            << "Submission status updated successfully."
-            << std::endl;
+        std::cout << "Status: " << status << std::endl;
     }
     else
     {
-        std::cout
-            << "Failed to update submission status."
-            << std::endl;
+        std::cout << "Submission not found or does not belong to the user." << std::endl;
     }
 
-    // Test 2: updateJobStatus()
+    // Test 2: getUserSubmissions()
 
-    std::cout << "\nTesting updateJobStatus():" << std::endl;
+    std::cout << "\nTesting getUserSubmissions():" << std::endl;
 
-    bool jobUpdated =
-        database.updateJobStatus(
-            submissionId,
-            "RUNNING"
-        );
+    std::string submissions = database.getUserSubmissions(userId);
 
-    if (jobUpdated)
-    {
-        std::cout
-            << "Job status updated successfully."
-            << std::endl;
-    }
-    else
-    {
-        std::cout
-            << "Failed to update job status."
-            << std::endl;
-    }
+    std::cout << "User submissions:" << std::endl;
 
-    // Get problem ID for the submission
-
-    int problemId =
-        database.getSubmissionProblemId(submissionId);
-
-    if (problemId == -1)
-    {
-        std::cout
-            << "Could not find problem ID."
-            << std::endl;
-
-        return 1;
-    }
-
-    std::cout
-        << "\nProblem ID: "
-        << problemId
-        << std::endl;
-
-    // Get test cases for the problem
-
-    std::vector<TestCase> testCases =
-        database.getTestCases(problemId);
-
-    if (testCases.empty())
-    {
-        std::cout
-            << "No test cases found for this problem."
-            << std::endl;
-
-        return 1;
-    }
-
-    int testCaseId = testCases[0].testCaseId;
-
-    std::cout
-        << "Using Test Case ID: "
-        << testCaseId
-        << std::endl;
-
-    // Test 3: saveExecutionResult()
-
-    std::cout << "\nTesting saveExecutionResult():" << std::endl;
-
-    bool resultSaved =
-        database.saveExecutionResult(
-            submissionId,
-            testCaseId,
-            "ACCEPTED",
-            "12",
-            15.5,
-            1024
-        );
-
-    if (resultSaved)
-    {
-        std::cout
-            << "Execution result saved successfully."
-            << std::endl;
-    }
-    else
-    {
-        std::cout
-            << "Failed to save execution result."
-            << std::endl;
-    }
+    std::cout << submissions << std::endl;
 
     return 0;
 }
