@@ -705,3 +705,116 @@ std::string Database::getUserProgress(int userId) {
         return "{}";
     }
 }
+
+// function to update the progress of a user
+// based on the result of a submission
+bool Database::updateUserProgress(int submissionId, const std::string& status) {
+    try {
+
+        // create a session to connect with the database
+        mysqlx::Session session(host, port, username, password);
+
+        // select the database to work with
+        session.sql("USE " + database).execute();
+
+        // first get the user and problem associated
+        // with the given submission
+        auto result = session.sql(
+            "SELECT user_id, problem_id "
+            "FROM submissions "
+            "WHERE submission_id = ?"
+        )
+        .bind(submissionId) // bind the submission id
+        .execute();
+
+        // fetch the submission information
+        auto row = result.fetchOne();
+
+        // if the submission does not exist,
+        // user progress cannot be updated
+        if (row.isNull()) {
+            return false;
+        }
+
+        // get the user id from the submission
+        int userId = row[0].get<int>();
+
+        // get the problem id from the submission
+        int problemId = row[1].get<int>();
+
+
+        // insert a progress record for this user and problem
+        // if the record already exists, update the existing record
+        session.sql(
+            "INSERT INTO user_progress "
+            "(user_id, problem_id, is_solved, first_solved_at, attempts) "
+
+            // set initial values when creating a new record
+            "VALUES (?, ?, ?, "
+
+            // store the current time only when the submission
+            // has been accepted
+            "CASE WHEN ? = 'ACCEPTED' "
+            "THEN CURRENT_TIMESTAMP ELSE NULL END, "
+
+            // first submission creates one attempt
+            "1) "
+
+            // if this user-problem combination already exists,
+            // update the existing progress record
+            "ON DUPLICATE KEY UPDATE "
+
+            // increase the number of attempts
+            "attempts = attempts + 1, "
+
+            // mark the problem as solved when the submission
+            // is accepted
+            "is_solved = CASE "
+            "WHEN ? = 'ACCEPTED' THEN TRUE "
+            "ELSE is_solved "
+            "END, "
+
+            // store the time when the problem was first solved
+            // only if it has not already been solved
+            "first_solved_at = CASE "
+            "WHEN ? = 'ACCEPTED' "
+            "AND first_solved_at IS NULL "
+            "THEN CURRENT_TIMESTAMP "
+            "ELSE first_solved_at "
+            "END"
+        )
+
+        // bind user id
+        .bind(userId)
+
+        // bind problem id
+        .bind(problemId)
+
+        // true when status is ACCEPTED,
+        // otherwise false
+        .bind(status == "ACCEPTED")
+
+        // bind status for the first_solved_at condition
+        .bind(status)
+
+        // bind status for the is_solved condition
+        .bind(status)
+
+        // bind status for the first_solved_at update condition
+        .bind(status)
+
+        // execute the INSERT/UPDATE query
+        .execute();
+
+        // return true when the progress was updated successfully
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+
+        // display the database error if the operation fails
+        std::cerr << "Failed to update user progress: " << e.what() << std::endl;
+
+        // return false to indicate that the update failed
+        return false;
+    }
+}

@@ -61,6 +61,10 @@ public:
 
     // function to get progress of a specific user
     std::string getUserProgress(int userId);
+
+    // function to update the progress of a user
+    // based on the result of a submission
+    bool updateUserProgress(int submissionId, const std::string& status);
 };
 
 #endif
