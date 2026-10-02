@@ -16,7 +16,7 @@ int main()
         "127.0.0.1",
         33060,
         "root",
-        "Pass",
+        "Ashutosh280705",
         "growcode_app"
     );
 
@@ -44,19 +44,19 @@ int main()
     // 100 250   -> 350
 
     std::string code = R"(
-#include <iostream>
-
-int main()
-{
-    int a, b;
-
-    std::cin >> a >> b;
-
-    std::cout << a - b;
-
-    return 0;
-}
-)";
+        #include <iostream>
+        
+        int main()
+        {
+            int a, b;
+        
+            std::cin >> a >> b;
+        
+            std::cout << a + b;
+        
+            return 0;
+        }
+        )";
 
     // Create submission and job together.
     //

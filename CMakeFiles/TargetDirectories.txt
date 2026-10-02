@@ -1,0 +1,3 @@
+/Users/ashutoshupreti/Desktop/GrowCode/CMakeFiles/growcode.dir
+/Users/ashutoshupreti/Desktop/GrowCode/CMakeFiles/edit_cache.dir
+/Users/ashutoshupreti/Desktop/GrowCode/CMakeFiles/rebuild_cache.dir

@@ -241,24 +241,28 @@ void ExecutionWorker::processJob(int submissionId)
 
     // if compilation fails,
     // mark the submission as a compilation error
-    if (!compiled)
-    {
+    if (!compiled) {
         database.updateSubmissionStatus(
             submissionId,
             "COMPILATION_ERROR"
         );
-
+    
+        database.updateUserProgress(
+            submissionId,
+            "COMPILATION_ERROR"
+        );
+    
         database.updateJobStatus(
             submissionId,
             "FAILED"
         );
-
+    
         std::cout
             << "Submission "
             << submissionId
             << ": Compilation Error"
             << std::endl;
-
+    
         return;
     }
 
@@ -321,7 +325,6 @@ void ExecutionWorker::processJob(int submissionId)
                 workingDirectory,
                 memoryUsed
             );
-
 
         // record the end time after execution
         auto endTime =

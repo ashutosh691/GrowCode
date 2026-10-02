@@ -471,14 +471,46 @@ bool Database::updateJobStatus(int submissionId, const std::string& status) {
         // select the database to work with
         session.sql("USE " + database).execute();
 
-        // query to update the job status
-        session.sql(
-            "UPDATE jobs "
-            "SET status = ? "
-            "WHERE submission_id = ?"
-        )
-        .bind(status, submissionId) // bind status and submission ID
-        .execute();
+        // if job is running, record the time when worker picked it
+        if (status == "RUNNING") {
+
+            session.sql(
+                "UPDATE jobs "
+                "SET status = ?, "
+                "picked_at = CURRENT_TIMESTAMP "
+                "WHERE submission_id = ?"
+            )
+            .bind(status, submissionId)
+            .execute();
+
+        }
+        // if job is completed or failed, record the finishing time
+        else if (
+            status == "COMPLETED" ||
+            status == "FAILED"
+        ) {
+
+            session.sql(
+                "UPDATE jobs "
+                "SET status = ?, "
+                "finished_at = CURRENT_TIMESTAMP "
+                "WHERE submission_id = ?"
+            )
+            .bind(status, submissionId)
+            .execute();
+
+        }
+        // for any other status, only update the job status
+        else {
+
+            session.sql(
+                "UPDATE jobs "
+                "SET status = ? "
+                "WHERE submission_id = ?"
+            )
+            .bind(status, submissionId)
+            .execute();
+        }
 
         // return true if the job status was updated successfully
         return true;
