@@ -172,14 +172,15 @@ http://localhost:8080
 - `queries.sql` created
 - MySQL database and tables created
 - C++ database connection
-
-### Pending
-- Backend API development
-- Authentication implementation
-- Frontend implementation
 - Submission and job management
 - OS execution engine
 - Scheduler and worker pool
 - Online judge integration
 - Testing and integration
+
+### Pending
+- Backend API development
+- Authentication implementation
+- Frontend implementation
+
 - LAN multi-user deployment
