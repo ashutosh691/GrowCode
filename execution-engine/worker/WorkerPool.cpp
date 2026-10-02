@@ -1,82 +1,108 @@
 #include "WorkerPool.h"
+
 #include <iostream>
 
-// Constructor: Reserves memory for the worker threads vector based on the requested size
-WorkerPool::WorkerPool(size_t threads) {
-    workers.reserve(threads);
+
+// constructor to initialize the WorkerPool
+WorkerPool::WorkerPool(
+    Scheduler& scheduler,
+    ExecutionWorker& executionWorker,
+    int workerCount
+)
+    : scheduler(scheduler),
+      executionWorker(executionWorker),
+      workerCount(workerCount),
+      running(false)
+{
 }
 
-// Destructor: Ensures all threads are safely stopped and joined before destruction
-WorkerPool::~WorkerPool() {
-    stop();
-}
 
-// Starts the worker pool by spawning background threads
-void WorkerPool::start() {
-    shouldStop = false;
-    
-    // Spawns 2 threads
-    for (size_t i = 0; i < 2; ++i) {
-        workers.emplace_back(&WorkerPool::workerThread, this);
+// function to start the worker pool
+void WorkerPool::start()
+{
+    // if the worker pool is already running,
+    // do not create another set of worker threads
+    if (running) {
+        return;
+    }
+
+    // mark the worker pool as running
+    running = true;
+
+    // create the required number of worker threads
+    for (int i = 0; i < workerCount; ++i) {
+
+        // each thread executes workerLoop()
+        workers.emplace_back(
+            &WorkerPool::workerLoop,
+            this
+        );
     }
 }
 
-// Enqueues a new submission ID into the job queue in a thread-safe manner
-void WorkerPool::enqueueJob(int submissionId) {
-    {
-        // Lock the queue mutex to safely push the new job
-        std::unique_lock<std::mutex> lock(queueMutex);
-        jobQueue.push(submissionId);
+
+// function to stop the worker pool
+void WorkerPool::stop()
+{
+    // if the worker pool is already stopped,
+    // there is nothing to do
+    if (!running) {
+        return;
     }
-    // Wake up one waiting worker thread to process the new job
-    cv.notify_one(); 
-}
 
-// The main execution loop run by each worker thread
-void WorkerPool::workerThread() {
-    while (true) {
-        int currentSubmissionId = -1;
-        {
-            // Acquire lock to safely access the shared job queue and stop flag
-            std::unique_lock<std::mutex> lock(queueMutex);
-            
-            // Wait until the pool is instructed to stop OR there is a job in the queue
-            cv.wait(lock, [this] { return shouldStop || !jobQueue.empty(); });
+    // mark the worker pool as stopped
+    running = false;
 
-            // Exit condition: if stop was requested and no jobs remain, terminate thread
-            if (shouldStop && jobQueue.empty()) return;
+    // shut down the scheduler
+    // this wakes up workers waiting for jobs
+    scheduler.shutdown();
 
-            // Fetch the next job from the front of the queue
-            currentSubmissionId = jobQueue.front();
-            jobQueue.pop();
+    // wait for all worker threads to finish
+    for (auto& worker : workers) {
+
+        // join the thread if it is still running
+        if (worker.joinable()) {
+            worker.join();
         }
+    }
 
-        // Process the retrieved job outside the critical section
-        if (currentSubmissionId != -1) {
-            std::cout << "[Worker " << std::this_thread::get_id() 
-                      << "] Running Submission: " << currentSubmissionId << std::endl;
-            
-            // Next: Connect to ProcessManager & ResourceManager
-        }
-    }
-}
-
-// Signals all worker threads to stop, wakes them up, and joins them
-void WorkerPool::stop() {
-    {
-        // Set the stop flag under lock protection
-        std::unique_lock<std::mutex> lock(queueMutex);
-        shouldStop = true;
-    }
-    
-    // Wake up all sleeping worker threads so they can exit their wait loops
-    cv.notify_all(); 
-    
-    // Join all worker threads to ensure they finish execution cleanly
-    for (std::thread &worker : workers) {
-        if (worker.joinable()) worker.join();
-    }
-    
-    // Clear the thread vector
+    // remove all completed worker threads
+    // from the vector
     workers.clear();
+}
+
+
+// function executed by every worker thread
+void WorkerPool::workerLoop()
+{
+    // continuously process jobs
+    while (true) {
+
+        // get the next submission from the scheduler
+        //
+        // if the queue is empty, this call can block
+        // until a job becomes available or the scheduler shuts down
+        int submissionId = scheduler.getNextJob();
+
+
+        // -1 indicates that the scheduler has been shut down
+        // and there are no more jobs to process
+        if (submissionId == -1) {
+            break;
+        }
+
+
+        // display which worker thread picked the submission
+        std::cout
+            << "Worker "
+            << std::this_thread::get_id()
+            << " picked Submission "
+            << submissionId
+            << std::endl;
+
+
+        // send the submission to ExecutionWorker
+        // for compilation and execution
+        executionWorker.processJob(submissionId);
+    }
 }
