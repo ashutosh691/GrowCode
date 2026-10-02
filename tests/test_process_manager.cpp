@@ -1,0 +1,64 @@
+#include "../execution-engine/process_manager/ProcessManager.h"
+
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+
+int main() {
+
+    namespace fs = std::filesystem;
+
+    fs::create_directories("tests/process_test");
+
+    std::string executable =
+        fs::absolute("tests/test_program").string();
+
+    std::string inputFile =
+        fs::absolute("tests/process_test/input.txt").string();
+
+    std::string outputFile =
+        fs::absolute("tests/process_test/output.txt").string();
+
+    std::string workingDirectory =
+        fs::absolute("tests/process_test").string();
+
+    {
+        std::ofstream input(inputFile);
+
+        input << "Hello ProcessManager";
+    }
+
+    long long memoryUsed = 0;
+
+    int result = ProcessManager::runProcess(
+        executable,
+        inputFile,
+        outputFile,
+        workingDirectory,
+        memoryUsed
+    );
+
+    std::cout
+        << "Exit code: "
+        << result
+        << std::endl;
+
+    std::cout
+        << "Memory used: "
+        << memoryUsed
+        << std::endl;
+
+    std::ifstream output(outputFile);
+
+    std::string text(
+        (std::istreambuf_iterator<char>(output)),
+        std::istreambuf_iterator<char>()
+    );
+
+    std::cout
+        << "Program output: "
+        << text
+        << std::endl;
+
+    return 0;
+}
