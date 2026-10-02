@@ -6,17 +6,46 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(growcode
+
+    # Server
     backend/src/server/main.cpp
+
+    # Database
     backend/src/database/Database.cpp
+
+    # Execution Engine - Scheduler
+    execution-engine/scheduler/Scheduler.cpp
+
+    # Execution Engine - Compiler
+    execution-engine/compiler/Compiler.cpp
+
+    # Execution Engine - Process Manager
+    execution-engine/process_manager/ProcessManager.cpp
+
+    # Execution Engine - Execution Worker
+    execution-engine/executor/ExecutionWorker.cpp
+
+    # Execution Engine - Worker Pool
+    execution-engine/worker/WorkerPool.cpp
 )
 
 target_include_directories(growcode PRIVATE
+
+    # Project root
     ${CMAKE_CURRENT_SOURCE_DIR}
+
+    # Backend headers
     ${CMAKE_CURRENT_SOURCE_DIR}/backend/include
+
+    # MySQL Connector/C++
     /opt/homebrew/opt/mysql-connector-c++/include
+
+    # nlohmann/json
     /opt/homebrew/opt/nlohmann-json/include
 )
 
 target_link_libraries(growcode PRIVATE
+
+    # MySQL Connector/C++
     /opt/homebrew/opt/mysql-connector-c++/lib/libmysqlcppconnx.dylib
 )
