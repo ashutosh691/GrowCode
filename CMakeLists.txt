@@ -13,6 +13,9 @@ add_executable(growcode
     # Database
     backend/src/database/Database.cpp
 
+    # Authentication
+    backend/src/auth/AuthManager.cpp
+
     # Execution Engine - Scheduler
     execution-engine/scheduler/Scheduler.cpp
 
@@ -42,10 +45,19 @@ target_include_directories(growcode PRIVATE
 
     # nlohmann/json
     /opt/homebrew/opt/nlohmann-json/include
+
+    # cpp-httplib
+    /opt/homebrew/opt/cpp-httplib/include
+
+    # OpenSSL
+    /opt/homebrew/opt/openssl@3/include
 )
 
 target_link_libraries(growcode PRIVATE
 
     # MySQL Connector/C++
     /opt/homebrew/opt/mysql-connector-c++/lib/libmysqlcppconnx.dylib
+
+    # OpenSSL crypto library
+    /opt/homebrew/opt/openssl@3/lib/libcrypto.dylib
 )

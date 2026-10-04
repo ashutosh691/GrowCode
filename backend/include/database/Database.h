@@ -65,6 +65,12 @@ public:
     // function to update the progress of a user
     // based on the result of a submission
     bool updateUserProgress(int submissionId, const std::string& status);
+
+    // function to create a new user
+    bool createUser(const std::string& name, const std::string& username, const std::string& email, const std::string& passwordHash);
+
+    // function to retrieve the role of a user
+    std::string getUserRole(int userId);
 };
 
 #endif

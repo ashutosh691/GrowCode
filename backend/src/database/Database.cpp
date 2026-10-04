@@ -850,3 +850,133 @@ bool Database::updateUserProgress(int submissionId, const std::string& status) {
         return false;
     }
 }
+
+
+
+// This function creates a new user in the users table.
+//
+// It returns:
+// true  -> user was created successfully
+// false -> user creation failed
+bool Database::createUser(
+    const std::string& name,
+    const std::string& usernameValue,
+    const std::string& email,
+    const std::string& passwordHash
+) {
+    try {
+
+        // Create a new MySQL session using
+        // the database connection details.
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        // Select the database that will be used.
+        session.sql(
+            "USE " + database
+        ).execute();
+
+        // Insert the new user's details
+        // into the users table.
+        //
+        // The password is stored as a hash,
+        // not as plain text.
+        session.sql(
+            "INSERT INTO users "
+            "(name, username, email, password_hash) "
+            "VALUES (?, ?, ?, ?)"
+        )
+
+        // Bind the actual values to the
+        // placeholders in the SQL query.
+        .bind(name)
+        .bind(usernameValue)
+        .bind(email)
+        .bind(passwordHash)
+
+        // Execute the INSERT query.
+        .execute();
+
+        // If the query executes successfully,
+        // return true.
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+
+        // Display the database error if
+        // user creation fails.
+        std::cerr
+            << "User creation failed: "
+            << e.what()
+            << std::endl;
+
+        // Return false to indicate failure.
+        return false;
+    }
+}
+
+
+// This function retrieves the role of a specific user.
+//
+// It returns:
+// "USER"  -> normal user
+// "ADMIN" -> administrator
+// ""      -> user not found or database error
+std::string Database::getUserRole(int userId)
+{
+    try
+    {
+        // Create a new MySQL session using
+        // the database connection details.
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        // Select the GrowCode database.
+        session.sql(
+            "USE " + database
+        ).execute();
+
+        // Retrieve the role of the user
+        // whose user_id matches the given ID.
+        auto result = session.sql(
+            "SELECT role "
+            "FROM users "
+            "WHERE user_id = ?"
+        )
+        .bind(userId)
+        .execute();
+
+        // Fetch the first row returned by the query.
+        auto row = result.fetchOne();
+
+        // If no user was found,
+        // return an empty string.
+        if (row.isNull())
+        {
+            return "";
+        }
+
+        // Return the user's role.
+        return row[0].get<std::string>();
+    }
+    catch (const mysqlx::Error& e)
+    {
+        // Display the database error if
+        // retrieving the role fails.
+        std::cerr
+            << "Failed to get user role: "
+            << e.what()
+            << std::endl;
+
+        // Return an empty string to indicate failure.
+        return "";
+    }
+}

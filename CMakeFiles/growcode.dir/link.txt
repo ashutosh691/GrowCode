@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/growcode.dir/backend/src/server/main.cpp.o CMakeFiles/growcode.dir/backend/src/database/Database.cpp.o -o growcode  /opt/homebrew/opt/mysql-connector-c++/lib/libmysqlcppconnx.dylib
