@@ -6,7 +6,6 @@
 // cmake ..
 // make -j$(sysctl -n hw.ncpu)
 
-
 // Run -
 // cd ~/Desktop/grow
 // ./build/growcode_server
