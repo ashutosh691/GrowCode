@@ -177,10 +177,11 @@ http://localhost:8080
 - Scheduler and worker pool
 - Online judge integration
 - Testing and integration
-
-### Pending
 - Backend API development
 - Authentication implementation
 - Frontend implementation
-
 - LAN multi-user deployment
+
+### Pending
+- UI Enhancement
+
