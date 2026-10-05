@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Progress - GrowCode</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="logo">GrowCode</div>
+        <nav>
+            <a href="/">Problems</a>
+            <a href="/history.html">History</a>
+            <a href="/progress.html">Progress</a>
+            <a href="/login.html" id="auth-link">Login</a>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <div class="page-header">
+            <h1>Your Progress</h1>
+            <p>Track your coding activity and problem-solving progress.</p>
+        </div>
+
+        <div id="progress-message">
+            Loading progress...
+        </div>
+
+        <div id="progress-dashboard">
+
+            <div class="progress-card">
+                <h2>Problems Solved</h2>
+                <p id="problems-solved">0</p>
+            </div>
+
+            <div class="progress-card">
+                <h2>Total Attempts</h2>
+                <p id="total-attempts">0</p>
+            </div>
+
+            <div class="progress-card">
+                <h2>Accepted</h2>
+                <p id="accepted">0</p>
+            </div>
+
+            <div class="progress-card">
+                <h2>Wrong Answer</h2>
+                <p id="wrong-answer">0</p>
+            </div>
+
+            <div class="progress-card">
+                <h2>Compilation Error</h2>
+                <p id="compilation-error">0</p>
+            </div>
+
+            <div class="progress-card">
+                <h2>Runtime Error</h2>
+                <p id="runtime-error">0</p>
+            </div>
+
+            <div class="progress-card">
+                <h2>Time Limit Exceeded</h2>
+                <p id="time-limit-exceeded">0</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="/js/progress.js"></script>
+
+</body>
+</html>
