@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GrowCode Admin Panel</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>GrowCode Admin Panel</h1>
+
+        <nav>
+            <a href="/">Home</a>
+            <a href="/history.html">History</a>
+            <a href="/progress.html">Progress</a>
+        </nav>
+    </header>
+
+
+    <main>
+
+        <section id="admin-status">
+            <h2>Administrator Dashboard</h2>
+            <p id="admin-message">
+                Checking administrator access...
+            </p>
+        </section>
+
+
+        <section class="admin-section">
+
+            <h2>Create New Problem</h2>
+
+            <form id="problem-form">
+
+                <label for="title">
+                    Problem Title
+                </label>
+
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    placeholder="Enter problem title"
+                    required
+                >
+
+
+                <label for="description">
+                    Description
+                </label>
+
+                <textarea
+                    id="description"
+                    name="description"
+                    placeholder="Enter problem description"
+                    rows="6"
+                    required
+                ></textarea>
+
+
+                <label for="difficulty">
+                    Difficulty
+                </label>
+
+                <select
+                    id="difficulty"
+                    name="difficulty"
+                    required
+                >
+                    <option value="EASY">Easy</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HARD">Hard</option>
+                </select>
+
+
+                <label for="constraints">
+                    Constraints
+                </label>
+
+                <textarea
+                    id="constraints"
+                    name="constraints"
+                    placeholder="Enter problem constraints"
+                    rows="4"
+                ></textarea>
+
+
+                <button type="submit">
+                    Create Problem
+                </button>
+
+            </form>
+
+            <p id="problem-message"></p>
+
+        </section>
+
+        <section class="admin-section">
+
+            <h2>Existing Problems</h2>
+        
+            <div id="problem-list">
+                Loading problems...
+            </div>
+        
+        </section>
+
+        <section class="admin-section">
+
+            <h2>Test Cases</h2>
+        
+            <div id="test-case-list">
+                Select a problem to view its test cases.
+            </div>
+        
+        </section>
+        
+        <section class="admin-section">
+
+            <h2>Add Test Case</h2>
+
+            <form id="test-case-form">
+
+                <label for="problem-id">
+                    Problem ID
+                </label>
+
+                <input
+                    type="number"
+                    id="problem-id"
+                    name="problem_id"
+                    placeholder="Enter problem ID"
+                    min="1"
+                    required
+                >
+
+
+                <label for="input">
+                    Input
+                </label>
+
+                <textarea
+                    id="input"
+                    name="input"
+                    placeholder="Enter test case input"
+                    rows="5"
+                ></textarea>
+
+
+                <label for="expected-output">
+                    Expected Output
+                </label>
+
+                <textarea
+                    id="expected-output"
+                    name="expected_output"
+                    placeholder="Enter expected output"
+                    rows="4"
+                    required
+                ></textarea>
+
+
+                <label for="is-sample">
+                    Sample Test Case
+                </label>
+
+                <select
+                    id="is-sample"
+                    name="is_sample"
+                >
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+
+
+                <label for="order-no">
+                    Test Case Order
+                </label>
+
+                <input
+                    type="number"
+                    id="order-no"
+                    name="order_no"
+                    placeholder="Example: 1"
+                    min="1"
+                    required
+                >
+
+
+                <button type="submit">
+                    Add Test Case
+                </button>
+
+            </form>
+
+            <p id="test-case-message"></p>
+
+        </section>
+
+    </main>
+
+
+    <script src="js/admin.js"></script>
+
+</body>
+</html>
