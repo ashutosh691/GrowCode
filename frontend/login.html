@@ -4,54 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GrowCode - Login</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-    <header>
-        <h1>GrowCode</h1>
-
+    <header class="navbar">
+        <div class="logo">GrowCode</div>
         <nav>
-            <a>Problems</a>
-            <a>Register</a>
+            <a href="/">Problems</a>
+            <a href="/register.html">Register</a>
         </nav>
     </header>
 
-    <main>
-
+    <div class="container">
+        <h1>GrowCode</h1>
         <h2>Login</h2>
 
-        <form>
+        <form id="loginForm">
 
-            <label for="username">Username:</label>
             <input
                 type="text"
                 id="username"
-                name="username"
+                placeholder="Username"
                 required
             >
 
-            <br><br>
-
-            <label for="password">Password:</label>
             <input
                 type="password"
                 id="password"
-                name="password"
+                placeholder="Password"
                 required
             >
-
-            <br><br>
 
             <button type="submit">Login</button>
 
         </form>
 
+        <p id="loginMessage"></p>
+
         <p>
-            Don't have an account? Register
+            Don't have an account? <a href="/register.html">Register</a>
         </p>
 
-    </main>
+    </div>
+
+    <script>
+        document
+            .getElementById("loginForm")
+            .addEventListener("submit", async function(event) {
+
+                event.preventDefault();
+
+                const username =
+                    document.getElementById("username").value;
+
+                const password =
+                    document.getElementById("password").value;
+
+                const message =
+                    document.getElementById("loginMessage");
+
+                try {
+
+                    const response = await fetch("/api/login", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/x-www-form-urlencoded"
+                        },
+                        body:
+                            `username=${encodeURIComponent(username)}` +
+                            `&password=${encodeURIComponent(password)}`
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+
+                        message.textContent =
+                            "Login successful. Redirecting...";
+
+                        window.location.href = "/";
+
+                    } else {
+
+                        message.textContent =
+                            data.error || "Login failed.";
+                    }
+
+                } catch (error) {
+
+                    message.textContent =
+                        "Unable to connect to server.";
+                }
+
+            });
+    </script>
 
 </body>
 </html>

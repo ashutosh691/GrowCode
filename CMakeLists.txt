@@ -17,19 +17,19 @@ add_executable(growcode
     backend/src/auth/AuthManager.cpp
 
     # Execution Engine - Scheduler
-    execution-engine/scheduler/Scheduler.cpp
+    execution_engine/scheduler/Scheduler.cpp
 
     # Execution Engine - Compiler
-    execution-engine/compiler/Compiler.cpp
+    execution_engine/compiler/Compiler.cpp
 
     # Execution Engine - Process Manager
-    execution-engine/process_manager/ProcessManager.cpp
+    execution_engine/process_manager/ProcessManager.cpp
 
     # Execution Engine - Execution Worker
-    execution-engine/executor/ExecutionWorker.cpp
+    execution_engine/executor/ExecutionWorker.cpp
 
     # Execution Engine - Worker Pool
-    execution-engine/worker/WorkerPool.cpp
+    execution_engine/workers/WorkerPool.cpp
 )
 
 target_include_directories(growcode PRIVATE

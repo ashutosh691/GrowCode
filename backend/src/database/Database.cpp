@@ -980,3 +980,218 @@ std::string Database::getUserRole(int userId)
         return "";
     }
 }
+
+
+// This function creates a new problem in the problems table.
+//
+// It returns:
+// problem ID  -> if the problem was created successfully
+// 0           -> if problem creation failed
+int Database::createProblem(
+    const std::string& title,
+    const std::string& description,
+    const std::string& difficulty,
+    const std::string& constraints,
+    int createdBy
+) {
+    try {
+
+        // Create a new MySQL session using
+        // the database connection details.
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        // Select the GrowCode database.
+        session.sql(
+            "USE " + database
+        ).execute();
+
+        // Insert the new problem into the problems table.
+        session.sql(
+            "INSERT INTO problems "
+            "(title, description, difficulty, constraints, created_by) "
+            "VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(title)
+        .bind(description)
+        .bind(difficulty)
+        .bind(constraints)
+        .bind(createdBy)
+        .execute();
+
+        // Retrieve the ID automatically generated
+        // by the AUTO_INCREMENT column.
+        auto result = session.sql(
+            "SELECT LAST_INSERT_ID()"
+        ).execute();
+
+        auto row = result.fetchOne();
+
+        // If no ID was returned, problem creation failed.
+        if (row.isNull()) {
+            return 0;
+        }
+
+        // Return the newly created problem ID.
+        return row[0].get<int>();
+    }
+    catch (const mysqlx::Error& e) {
+
+        // Display the database error.
+        std::cerr
+            << "Problem creation failed: "
+            << e.what()
+            << std::endl;
+
+        // Return 0 to indicate failure.
+        return 0;
+    }
+}
+
+// This function creates a new test case
+// for an existing problem.
+//
+// It returns:
+// test case ID -> if creation succeeds
+// 0            -> if creation fails
+int Database::createTestCase(
+    int problemId,
+    const std::string& input,
+    const std::string& expectedOutput,
+    bool isSample,
+    int orderNo
+) {
+    try {
+
+        // Create a new MySQL session.
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        // Select the GrowCode database.
+        session.sql(
+            "USE " + database
+        ).execute();
+
+        // Insert the test case into the test_cases table.
+        session.sql(
+            "INSERT INTO test_cases "
+            "(problem_id, input, expected_output, is_sample, order_no) "
+            "VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(problemId)
+        .bind(input)
+        .bind(expectedOutput)
+        .bind(isSample)
+        .bind(orderNo)
+        .execute();
+
+        // Retrieve the ID automatically generated
+        // by the AUTO_INCREMENT column.
+        auto result = session.sql(
+            "SELECT LAST_INSERT_ID()"
+        ).execute();
+
+        auto row = result.fetchOne();
+
+        // If no ID was returned, test-case creation failed.
+        if (row.isNull()) {
+            return 0;
+        }
+
+        // Return the newly created test case ID.
+        return row[0].get<int>();
+    }
+    catch (const mysqlx::Error& e) {
+
+        // Display the database error.
+        std::cerr
+            << "Test case creation failed: "
+            << e.what()
+            << std::endl;
+
+        // Return 0 to indicate failure.
+        return 0;
+    }
+}
+
+// This function finds a user using their username.
+//
+// It retrieves:
+// user ID
+// password hash
+// user role
+//
+// It returns:
+// true  -> user was found
+// false -> user was not found or database error occurred
+bool Database::findUser(
+    const std::string& usernameValue,
+    std::string& storedHash,
+    int& userId,
+    std::string& role
+) {
+    try {
+
+        // Create a new MySQL session.
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        // Select the GrowCode database.
+        session.sql(
+            "USE " + database
+        ).execute();
+
+        // Find the user using their username.
+        auto result = session.sql(
+            "SELECT user_id, password_hash, role "
+            "FROM users "
+            "WHERE username = ?"
+        )
+        .bind(usernameValue)
+        .execute();
+
+        // Retrieve the first matching row.
+        auto row = result.fetchOne();
+
+        // If no user was found,
+        // return false.
+        if (row.isNull()) {
+            return false;
+        }
+
+        // Store the user's ID.
+        userId = row[0].get<int>();
+
+        // Store the hashed password.
+        storedHash = row[1].get<std::string>();
+
+        // Store the user's role.
+        role = row[2].get<std::string>();
+
+        // User was successfully found.
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+
+        // Display the database error.
+        std::cerr
+            << "Failed to find user: "
+            << e.what()
+            << std::endl;
+
+        // Return false to indicate failure.
+        return false;
+    }
+}

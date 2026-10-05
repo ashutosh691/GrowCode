@@ -71,6 +71,32 @@ public:
 
     // function to retrieve the role of a user
     std::string getUserRole(int userId);
+
+        // function to create a new problem
+        int createProblem(
+            const std::string& title,
+            const std::string& description,
+            const std::string& difficulty,
+            const std::string& constraints,
+            int createdBy
+        );
+    
+        // function to create a new test case for a problem
+        int createTestCase(
+            int problemId,
+            const std::string& input,
+            const std::string& expectedOutput,
+            bool isSample,
+            int orderNo
+        );
+    
+        // function to find a user using their username
+        bool findUser(
+            const std::string& username,
+            std::string& storedHash,
+            int& userId,
+            std::string& role
+        );
 };
 
 #endif

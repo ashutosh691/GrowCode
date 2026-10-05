@@ -1,5 +1,5 @@
 // Build -  
-// cd ~/Desktop/grow
+// cd ~/Desktop/growcode
 // rm -rf build
 // mkdir build
 // cd build
@@ -7,8 +7,8 @@
 // make -j$(sysctl -n hw.ncpu)
 
 // Run -
-// cd ~/Desktop/grow
-// ./build/growcode_server
+// cd ~/Desktop/growcode
+// ./build/growcode
 
 #include <iostream>
 #include <sstream>
@@ -960,7 +960,7 @@ int main() {
         }
     );
 
-    server.set_mount_point("/", "./frontend");
+    server.set_mount_point("/", "../frontend");
 
     std::cout
         << "GrowCode server starting on http://localhost:8080"
