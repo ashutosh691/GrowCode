@@ -36,7 +36,7 @@ int main() {
 
     std::cout<< "Exit code: "<< result<< std::endl;
 
-    std::cout<< "Memory used: "<< memoryUsed<< std::endl;
+    std::cout<< "Memory used: " << memoryUsed<< std::endl;
 
     // Read and print the program's output file
     std::ifstream output(outputFile);
