@@ -35,7 +35,6 @@ int main() {
     );
 
     std::cout<< "Exit code: "<< result<< std::endl;
-
     std::cout<< "Memory used: "<< memoryUsed<< std::endl;
 
     // Read and print the program's output file
@@ -44,7 +43,6 @@ int main() {
         (std::istreambuf_iterator<char>(output)),
         std::istreambuf_iterator<char>()
     );
-
     std::cout << "Program output: " << text << std::endl;
 
     return 0;
