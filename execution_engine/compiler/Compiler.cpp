@@ -8,40 +8,31 @@
 
 // function to compile the submitted source code
 bool Compiler::compile(const std::string& sourceFile, const std::string& executableFile, const std::string& errorFile) {
+    
     // create a new process for the compiler
     pid_t pid = fork();
 
     // fork() returns a negative value if process creation fails
     if (pid < 0) {
-        std::cerr
-            << "Failed to create compiler process."
-            << std::endl;
-
+        std::cerr << "Failed to create compiler process."<< std::endl;
         return false;
     }
 
-    // child process
+    // Inside the child process
     if (pid == 0) {
 
         // open the file where compiler errors will be stored
-        int errorFd = open(
-            errorFile.c_str(),
-            O_WRONLY | O_CREAT | O_TRUNC,
-            0644
-        );
+        int errorFd = open(errorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC,0644);
 
-        // if the error file could not be opened,
-        // terminate the child process
+        // Exit if the error file cannot be opened
         if (errorFd < 0) {
             _exit(1);
         }
 
-        // redirect standard error (stderr)
-        // to the compiler error file
+        // Redirect standard error (stderr) to our error file
         dup2(errorFd, STDERR_FILENO);
 
-        // close the original file descriptor
-        // because dup2() has created the required duplicate
+        // Close the temporary file descriptor
         close(errorFd);
 
         // replace the child process with the g++ compiler process
@@ -55,8 +46,7 @@ bool Compiler::compile(const std::string& sourceFile, const std::string& executa
             static_cast<char*>(nullptr)
         );
 
-        // if execlp() returns, execution failed
-        // because execlp() normally does not return on success
+        // If execlp fails and returns, force close the child process
         _exit(1);
     }
 
@@ -68,15 +58,13 @@ bool Compiler::compile(const std::string& sourceFile, const std::string& executa
         return false;
     }
 
-    // check whether the compiler process
-    // terminated normally
+    // Check if the compiler finished normally without crashing
     if (WIFEXITED(status)) {
 
         // return true only when g++ returned exit code 0
         return WEXITSTATUS(status) == 0;
     }
 
-    // return false if the compiler process
-    // did not terminate normally
+    // Return false if the compiler crashed or failed
     return false;
 }
