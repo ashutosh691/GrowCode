@@ -8,81 +8,42 @@
 #include "../scheduler/Scheduler.h"
 #include "../executor/ExecutionWorker.h"
 
-// WorkerPool manages multiple worker threads.
-//
-// Its main responsibility is to create and manage a group of
-// worker threads. Each worker gets a job from the Scheduler
-// and sends that job to the ExecutionWorker for execution.
+// Manages a group of worker threads.
+// Each worker takes jobs from the Scheduler and passes them to the ExecutionWorker.
 class WorkerPool {
 private:
 
-    // Reference to the Scheduler.
-    //
-    // The scheduler maintains the job queue. Workers will
-    // request the next available job from this scheduler.
+    // Keeps track of the job queue to request new jobs
     Scheduler& scheduler;
 
-    // Reference to the ExecutionWorker.
-    //
-    // ExecutionWorker is responsible for actually processing
-    // a submission: compiling the code, running it, checking
-    // the output, and updating the database.
+    // Compiles, runs, and checks the submitted code
     ExecutionWorker& executionWorker;
 
-    // Stores all worker threads created by this pool.
-    //
-    // Each element represents one independent thread that
-    // continuously takes jobs from the scheduler.
+   // List of active background threads in this pool
     std::vector<std::thread> workers;
 
-    // Number of worker threads that should be created.
-    //
-    // For example, if workerCount = 4, the pool will create
-    // four worker threads.
+    // Total number of worker threads to create
     int workerCount;
 
-    // Indicates whether the worker pool is currently running.
-    //
-    // atomic is used because this variable can potentially
-    // be accessed by multiple threads safely.
+    // Flag to track if the pool is running (thread-safe)
     std::atomic<bool> running;
 
-    // Function executed by every worker thread.
-    //
-    // Each worker repeatedly:
-    // 1. Gets a job from the Scheduler.
-    // 2. Checks whether the scheduler has stopped.
-    // 3. Sends the job to ExecutionWorker.
+    // Infinite loop that each background thread runs to process jobs
     void workerLoop();
 
 public:
 
-    // Constructor.
-    //
-    // scheduler:
-    //     Scheduler from which workers receive jobs.
-    //
-    // executionWorker:
-    //     Component responsible for executing submissions.
-    //
-    // workerCount:
-    //     Number of worker threads to create.
+    // Initializes the pool with a scheduler, executor, and thread count
     WorkerPool(
         Scheduler& scheduler,
         ExecutionWorker& executionWorker,
         int workerCount
     );
 
-    // Starts the worker pool.
-    //
-    // This creates workerCount threads.
-    // Each thread starts executing workerLoop().
+    // Creates the background threads and starts processing jobs
     void start();
 
-    // Stops the worker pool.
-    //
-    // This shuts down the scheduler and waits for all
-    // worker threads to finish before returning.
+    // Shuts down the system and waits for all threads to finish safely
     void stop();
 };
 
