@@ -3,210 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>GrowCode Admin Panel</title>
-
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
-
-<body>
-
-    <header>
-        <h1>GrowCode Admin Panel</h1>
-
-        <nav>
-            <a href="/">Home</a>
+<body class="admin-page">
+    <header class="navbar">
+        <a class="logo" href="/" aria-label="GrowCode home">GrowCode</a>
+        <nav aria-label="Main navigation">
+            <a href="/">Problems</a>
             <a href="/history.html">History</a>
-            <a href="/progress.html">Progress</a>
+            <a href="/leaderboard.html">Leaderboard</a>
+            <a href="/admin.html" aria-current="page">Admin</a>
         </nav>
     </header>
 
-
-    <main>
-
-        <section id="admin-status">
-            <h2>Administrator Dashboard</h2>
-            <p id="admin-message">
-                Checking administrator access...
-            </p>
-        </section>
-
-
-        <section class="admin-section">
-
-            <h2>Create New Problem</h2>
-
-            <form id="problem-form">
-
-                <label for="title">
-                    Problem Title
-                </label>
-
-                <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    placeholder="Enter problem title"
-                    required
-                >
-
-
-                <label for="description">
-                    Description
-                </label>
-
-                <textarea
-                    id="description"
-                    name="description"
-                    placeholder="Enter problem description"
-                    rows="6"
-                    required
-                ></textarea>
-
-
-                <label for="difficulty">
-                    Difficulty
-                </label>
-
-                <select
-                    id="difficulty"
-                    name="difficulty"
-                    required
-                >
-                    <option value="EASY">Easy</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HARD">Hard</option>
-                </select>
-
-
-                <label for="constraints">
-                    Constraints
-                </label>
-
-                <textarea
-                    id="constraints"
-                    name="constraints"
-                    placeholder="Enter problem constraints"
-                    rows="4"
-                ></textarea>
-
-
-                <button type="submit">
-                    Create Problem
-                </button>
-
-            </form>
-
-            <p id="problem-message"></p>
-
-        </section>
-
-        <section class="admin-section">
-
-            <h2>Existing Problems</h2>
-        
-            <div id="problem-list">
-                Loading problems...
+    <main class="container admin-container">
+        <section class="admin-hero">
+            <div>
+                <p class="admin-eyebrow">GROWCODE • CONTROL CENTER</p>
+                <h1>Admin Dashboard</h1>
+                <p class="admin-subtitle">Create coding problems and manage their test cases.</p>
             </div>
-        
-        </section>
-
-        <section class="admin-section">
-
-            <h2>Test Cases</h2>
-        
-            <div id="test-case-list">
-                Select a problem to view its test cases.
+            <div id="admin-status" class="admin-status-card">
+                <span class="admin-status-dot" aria-hidden="true"></span>
+                <div>
+                    <strong>Administrator access</strong>
+                    <p id="admin-message" role="status" aria-live="polite">Checking administrator access...</p>
+                </div>
             </div>
-        
         </section>
-        
-        <section class="admin-section">
 
-            <h2>Add Test Case</h2>
+        <section class="admin-section admin-panel">
+            <div class="admin-section-heading">
+                <div>
+                    <span class="admin-step">01</span>
+                    <h2>Create New Problem</h2>
+                </div>
+                <p>Add a problem to the GrowCode judge.</p>
+            </div>
 
-            <form id="test-case-form">
+            <form id="problem-form" class="admin-form">
+                <div class="admin-field admin-field-wide">
+                    <label for="title">Problem Title</label>
+                    <input type="text" id="title" name="title" placeholder="e.g. Sum of Two Numbers" required>
+                </div>
 
-                <label for="problem-id">
-                    Problem ID
-                </label>
+                <div class="admin-field admin-field-wide">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Describe the problem clearly..." rows="5" required></textarea>
+                </div>
 
-                <input
-                    type="number"
-                    id="problem-id"
-                    name="problem_id"
-                    placeholder="Enter problem ID"
-                    min="1"
-                    required
-                >
+                <div class="admin-field">
+                    <label for="difficulty">Difficulty</label>
+                    <select id="difficulty" name="difficulty" required>
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                    </select>
+                </div>
 
+                <div class="admin-field admin-field-wide">
+                    <label for="constraints">Constraints <span class="optional-label">Optional</span></label>
+                    <textarea id="constraints" name="constraints" placeholder="e.g. 1 ≤ n ≤ 10⁵" rows="3"></textarea>
+                </div>
 
-                <label for="input">
-                    Input
-                </label>
-
-                <textarea
-                    id="input"
-                    name="input"
-                    placeholder="Enter test case input"
-                    rows="5"
-                ></textarea>
-
-
-                <label for="expected-output">
-                    Expected Output
-                </label>
-
-                <textarea
-                    id="expected-output"
-                    name="expected_output"
-                    placeholder="Enter expected output"
-                    rows="4"
-                    required
-                ></textarea>
-
-
-                <label for="is-sample">
-                    Sample Test Case
-                </label>
-
-                <select
-                    id="is-sample"
-                    name="is_sample"
-                >
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                </select>
-
-
-                <label for="order-no">
-                    Test Case Order
-                </label>
-
-                <input
-                    type="number"
-                    id="order-no"
-                    name="order_no"
-                    placeholder="Example: 1"
-                    min="1"
-                    required
-                >
-
-
-                <button type="submit">
-                    Add Test Case
-                </button>
-
+                <div class="admin-form-actions admin-field-wide">
+                    <button type="submit" class="admin-button admin-button-primary">Create Problem</button>
+                    <p id="problem-message" class="admin-feedback" role="status" aria-live="polite"></p>
+                </div>
             </form>
-
-            <p id="test-case-message"></p>
-
         </section>
 
+        <section class="admin-section admin-panel">
+            <div class="admin-section-heading">
+                <div>
+                    <span class="admin-step">02</span>
+                    <h2>Existing Problems</h2>
+                </div>
+                <p>Select a problem to manage its test cases.</p>
+            </div>
+            <div id="problem-list" class="admin-problem-list" aria-live="polite">
+                <p class="admin-muted">Loading problems...</p>
+            </div>
+        </section>
+
+        <section class="admin-section admin-panel">
+            <div class="admin-section-heading">
+                <div>
+                    <span class="admin-step">03</span>
+                    <h2>Test Cases</h2>
+                </div>
+                <p>Review the test cases for the selected problem.</p>
+            </div>
+            <div id="test-case-list" class="admin-test-case-list" aria-live="polite">
+                <p class="admin-muted">Select a problem to view its test cases.</p>
+            </div>
+        </section>
+
+        <section class="admin-section admin-panel">
+            <div class="admin-section-heading">
+                <div>
+                    <span class="admin-step">04</span>
+                    <h2>Add Test Case</h2>
+                </div>
+                <p>Define input and expected output for a problem.</p>
+            </div>
+
+            <form id="test-case-form" class="admin-form">
+                <div class="admin-field admin-field-wide">
+                    <label for="problem-id">Problem ID</label>
+                    <input type="number" id="problem-id" name="problem_id" placeholder="Select a problem above or enter its ID" min="1" required>
+                    <p class="admin-field-help">Use “Add Test Case” on a problem card to fill this automatically.</p>
+                </div>
+
+                <div class="admin-field">
+                    <label for="input">Input</label>
+                    <textarea id="input" name="input" placeholder="Enter test case input" rows="5"></textarea>
+                </div>
+
+                <div class="admin-field">
+                    <label for="expected-output">Expected Output</label>
+                    <textarea id="expected-output" name="expected_output" placeholder="Enter expected output" rows="5" required></textarea>
+                </div>
+
+                <div class="admin-field">
+                    <label for="is-sample">Sample Test Case</label>
+                    <select id="is-sample" name="is_sample">
+                        <option value="true">Yes — visible to users</option>
+                        <option value="false">No — hidden test</option>
+                    </select>
+                </div>
+
+                <div class="admin-field">
+                    <label for="order-no">Test Case Order</label>
+                    <input type="number" id="order-no" name="order_no" placeholder="e.g. 1" min="1" required>
+                </div>
+
+                <div class="admin-form-actions admin-field-wide">
+                    <button type="submit" class="admin-button admin-button-primary">Add Test Case</button>
+                    <p id="test-case-message" class="admin-feedback" role="status" aria-live="polite"></p>
+                </div>
+            </form>
+        </section>
     </main>
 
-
-    <script src="js/admin.js"></script>
-
+    <script src="/js/admin.js"></script>
 </body>
 </html>

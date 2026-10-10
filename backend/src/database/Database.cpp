@@ -1195,3 +1195,57 @@ bool Database::findUser(
         return false;
     }
 }
+
+std::string Database::getLeaderboard()
+{
+    try {
+        mysqlx::Session session(
+            host,
+            port,
+            username,
+            password
+        );
+
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "SELECT "
+            "u.user_id, u.name, u.username, "
+            "CAST(COALESCE(SUM(CASE "
+            "WHEN up.solved = TRUE THEN 1 ELSE 0 END), 0) AS UNSIGNED) "
+            "AS problems_solved, "
+            "CAST(COALESCE(SUM(up.attempts), 0) AS UNSIGNED) "
+            "AS total_attempts "
+            "FROM users u "
+            "LEFT JOIN user_progress up ON up.user_id = u.user_id "
+            "WHERE u.role = 'USER' "
+            "GROUP BY u.user_id, u.name, u.username "
+            "ORDER BY problems_solved DESC, total_attempts ASC, u.username ASC"
+        ).execute();
+
+        nlohmann::json leaderboard = nlohmann::json::array();
+        auto rows = result.fetchAll();
+        int rank = 1;
+
+        for (const auto& row : rows) {
+            leaderboard.push_back({
+                {"rank", rank++},
+                {"user_id", row[0].get<int>()},
+                {"name", row[1].get<std::string>()},
+                {"username", row[2].get<std::string>()},
+                {"problems_solved", row[3].get<uint64_t>()},
+                {"total_attempts", row[4].get<uint64_t>()}
+            });
+        }
+
+        return leaderboard.dump();
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr
+            << "Failed to get leaderboard: "
+            << e.what()
+            << std::endl;
+
+        return "[]";
+    }
+}

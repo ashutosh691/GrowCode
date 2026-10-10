@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - GrowCode</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">GrowCode</div>
+        <nav>
+            <a href="/">Problems</a>
+            <a href="/history.html">History</a>
+            <a href="/leaderboard.html" aria-current="page">Leaderboard</a>
+            <a href="/login.html" id="auth-link">Login</a>
+        </nav>
+    </header>
+
+    <main class="container leaderboard-page">
+        <section class="page-header">
+            <h1>Leaderboard</h1>
+            <p>Compete with other GrowCode users. Solve more problems to climb the rankings.</p>
+        </section>
+
+        <div id="leaderboard-message" class="leaderboard-message" role="status">
+            Loading leaderboard...
+        </div>
+
+        <section class="leaderboard-summary" aria-label="Leaderboard highlights">
+            <article class="leaderboard-summary-card">
+                <span class="summary-label">Participants</span>
+                <strong id="participant-count">—</strong>
+            </article>
+            <article class="leaderboard-summary-card">
+                <span class="summary-label">Top user</span>
+                <strong id="top-user">—</strong>
+            </article>
+            <article class="leaderboard-summary-card">
+                <span class="summary-label">Top solved</span>
+                <strong id="top-solved">—</strong>
+            </article>
+        </section>
+
+        <section class="leaderboard-table-wrap" aria-label="User rankings">
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Rank</th>
+                        <th scope="col">User</th>
+                        <th scope="col">Problems solved</th>
+                        <th scope="col">Total attempts</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr>
+                        <td colspan="4" class="leaderboard-empty">Loading rankings...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="/js/leaderboard.js"></script>
+</body>
+</html>

@@ -97,6 +97,9 @@ public:
             int& userId,
             std::string& role
         );
+
+        // Returns a JSON array of users ranked by solved problems, then attempts.
+        std::string getLeaderboard();
 };
 
 #endif

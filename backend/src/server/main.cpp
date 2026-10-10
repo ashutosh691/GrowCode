@@ -10,6 +10,11 @@
 // cd ~/Desktop/growcode
 // ./build/growcode
 
+
+// For other sys -
+// IP:8080 in browser
+
+// Command for find ip -  ipconfig getifaddr en0
 #include <iostream>
 #include <sstream>
 #include <nlohmann/json.hpp>
@@ -959,6 +964,27 @@ int main() {
             }
         }
     );
+
+    server.Get("/api/leaderboard", [&](const httplib::Request&, httplib::Response& res) {
+        try {
+            res.set_content(
+                database.getLeaderboard(),
+                "application/json"
+            );
+        }
+        catch (const std::exception& e) {
+            std::cerr
+                << "Failed to get leaderboard: "
+                << e.what()
+                << std::endl;
+
+            res.status = 500;
+            res.set_content(
+                "{\"error\":\"Unable to load leaderboard\"}",
+                "application/json"
+            );
+        }
+    });
 
     server.set_mount_point("/", "../frontend");
 
