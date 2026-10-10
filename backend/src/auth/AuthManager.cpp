@@ -63,8 +63,7 @@ std::string AuthManager::hashPassword(
 
     // Characters used to convert each byte of the
     // binary hash into hexadecimal representation.
-    static const char hex[] =
-        "0123456789abcdef";
+    static const char hex[] = "0123456789abcdef";
 
     // This string will contain the final hexadecimal hash.
     std::string result;
@@ -75,15 +74,11 @@ std::string AuthManager::hashPassword(
 
         // Extract the upper 4 bits of the byte
         // and convert them into a hexadecimal character.
-        result += hex[
-            (hash[i] >> 4) & 0x0F
-        ];
+        result += hex[(hash[i] >> 4) & 0x0F];
 
         // Extract the lower 4 bits of the byte
         // and convert them into a hexadecimal character.
-        result += hex[
-            hash[i] & 0x0F
-        ];
+        result += hex[hash[i] & 0x0F];
     }
 
     // Return the hexadecimal representation
