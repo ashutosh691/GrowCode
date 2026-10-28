@@ -1,187 +1,248 @@
-# GrowCode
+GrowCode
 
-GrowCode is a locally hosted, multi-user coding platform with an integrated online judge. Users can browse programming problems, write C++ solutions, submit their code, and receive automated verdicts after compilation and execution against predefined test cases.
+GrowCode is a locally hosted, multi-user coding platform with an integrated online judge. Users can browse programming problems, write solutions in supported programming languages, submit their code, and receive automated verdicts after compilation and execution against predefined test cases.
 
-## Problem Statement / Objective
+The platform combines Operating System and Database Management System concepts through a C++ execution engine, concurrent submission processing, and a MySQL-backed data management system.
+
+Problem Statement / Objective
 
 Existing online coding platforms generally depend on Internet connectivity and remote servers. GrowCode aims to provide a college-oriented, locally hosted coding platform where multiple users can access a central server and practice programming problems.
 
 The main objectives are:
 
-- Develop a local multi-user coding platform.
-- Implement automated C++ compilation and code evaluation.
-- Manage users, problems, test cases, submissions, and results using MySQL.
-- Demonstrate Operating System concepts such as process management, scheduling, multithreading, synchronization, IPC, and resource management.
-- Demonstrate DBMS concepts such as primary keys, foreign keys, normalization, SQL queries, transactions, indexes, and concurrency.
+* Develop a local, multi-user coding platform.
+* Implement automated code compilation and evaluation.
+* Manage users, problems, test cases, submissions, execution results, and user progress using MySQL.
+* Demonstrate Operating System concepts such as process management, scheduling, multithreading, synchronization, inter-process communication (IPC), and resource management.
+* Demonstrate DBMS concepts such as primary keys, foreign keys, normalization, SQL queries, transactions, indexes, and concurrency.
+* Provide submission history and user progress tracking.
+* Analyze submitted code for estimated time and space complexity.
+* Display expected complexity and recommended algorithms configured for individual problems.
 
-## Team Members
+Team Members
 
-- Mayank Chhetri
-- Ashutosh Upreti
-- Anuj Negi
+* Mayank Chhetri
+* Ashutosh Upreti
+* Anuj Negi
 
-## Technologies / Tools Used
+Technologies / Tools Used
 
-- **Backend:** C++
-- **Frontend:** HTML, CSS, JavaScript
-- **Database:** MySQL
-- **Database Connectivity:** MySQL Connector/C++ (X DevAPI)
-- **HTTP Server:** cpp-httplib
-- **JSON:** nlohmann/json
-- **Compiler:** g++
-- **OS APIs:** fork(), exec(), wait4(), pipe(), dup2(), setrlimit(), kill()
-- **Build System:** CMake
-- **Version Control:** Git and GitHub
-- **Development Environment:** Visual Studio Code
+* Backend: C++
+* Frontend: HTML, CSS, JavaScript
+* Database: MySQL
+* Database Connectivity: MySQL Connector/C++ (X DevAPI)
+* HTTP Server: cpp-httplib
+* JSON Processing: nlohmann/json
+* Compiler: g++
+* OS APIs: fork(), exec(), wait4(), pipe(), dup2(), setrlimit(), kill()
+* Build System: CMake
+* Version Control: Git and GitHub
+* Development Environment: Visual Studio Code
 
-## Project Setup / Installation Instructions
+Project Setup / Installation Instructions
 
-### 1. Clone the Repository
+1. Clone the Repository
 
 git clone https://github.com/ashutosh691/GrowCode.git
 cd GrowCode
 
-### 2. Start the MySQL Service
+2. Start the MySQL Service
 
-```bash
+On macOS with MySQL installed through Homebrew, run:
+
 brew services start mysql
-```
 
-### 3. Login to MySQL
+3. Log In to MySQL
 
-```bash
 mysql -u root -p
-```
 
-### 4. Create the Database and Tables
+Enter your MySQL password when prompted.
 
-Run the SQL file:
+4. Create the Database and Tables
 
-```sql
+From the MySQL shell, execute the project’s SQL initialization file:
+
 source database/queries.sql
-```
 
-### 5. Configure Database Connection
+Ensure the SQL file exists at the specified path relative to your current working directory. If necessary, use the absolute path to queries.sql.
 
-Configure the MySQL connection details in the backend using your local database credentials.
+5. Configure the Database Connection
 
-> **Note:** Do not commit the actual database password to the repository.
+Configure the MySQL connection details in the backend according to your local environment.
 
-### 6. Build the Project
+Ensure that the configured values match your MySQL installation:
 
-From the project root:
+* Host
+* Port
+* Username
+* Password
+* Database name
 
-```bash
-rm -rf build
-mkdir build
+Security note: Do not commit database passwords, API keys, or other credentials to the repository. Use environment variables or a local configuration file excluded from version control where supported.
+
+6. Build the Project
+
+From the project root, run:
+
+mkdir -p build
 cd build
 cmake ..
 make -j$(sysctl -n hw.ncpu)
-```
 
-### 7. Run the Project
+If CMake reports missing dependencies, install and configure the required libraries before rebuilding.
 
-Return to the project root:
+7. Run the Project
 
-```bash
-cd ..
+From the project root, start the compiled server:
+
 ./build/growcode_server
-```
 
-The server will be available at:
+The local server will be available at:
 
-```text
 http://localhost:8080
-```
 
----
+Open this address in your browser to access the application.
 
-## Major Features / Modules
+For access from other devices on the same local network, configure the server to listen on the appropriate network interface and use the host computer’s LAN IP address. Ensure that firewall rules permit the required connection.
 
-### User Management
+⸻
 
-- User registration
-- User login and logout
-- Session management
-- Authentication and protected routes
+Major Features / Modules
 
-### Problem Management
+1. User Management
 
-- Browse programming problems
-- View problem details
-- Admin problem management
-- Test-case management
+* User registration
+* User login and logout
+* Session management
+* Authentication and protected routes
+* User-specific submission history
 
-### Code Submission
+2. Problem Management
 
-- C++ code editor
-- Code submission through HTTP API
-- Submission history
-- User progress tracking
+* Browse programming problems
+* View problem descriptions and constraints
+* View sample inputs and expected outputs
+* Admin problem management
+* Test-case management
+* Expected time and space complexity configuration
+* Recommended algorithm configuration
 
-### Online Judge
+3. Code Submission
 
-- C++ compilation using `g++`
-- Execution against predefined test cases
-- Output comparison
-- Automated verdict generation
+* Browser-based code editor
+* Language selection
+* Code submission through HTTP APIs
+* Submission status tracking
+* Submission history
+* User progress tracking
 
-### Supported Verdicts
+4. Online Judge
 
-- `ACCEPTED`
-- `WRONG_ANSWER`
-- `COMPILATION_ERROR`
-- `RUNTIME_ERROR`
-- `TIME_LIMIT_EXCEEDED`
+* Source-code compilation using the configured compiler
+* Execution against predefined test cases
+* Comparison of actual and expected output
+* Automated verdict generation
+* Reporting of compilation and runtime errors
+* Execution time and resource-limit monitoring
 
-### OS Execution Engine
+Supported Verdicts
 
-- Process creation using `fork()`
-- Program execution using `exec()`
-- Process monitoring using `wait4()`
-- Inter-Process Communication using `pipe()`
-- File descriptor management using `dup2()`
-- Resource and time management
-- Process termination using `kill()`
+* ACCEPTED
+* WRONG_ANSWER
+* COMPILATION_ERROR
+* RUNTIME_ERROR
+* TIME_LIMIT_EXCEEDED
 
-### Scheduling and Concurrency
+5. Complexity Analysis
 
-- Job queue
-- Scheduler
-- Worker threads
-- Mutex and condition variables
-- Concurrent execution of multiple submissions
+* Analyze accepted submissions for estimated time complexity.
+* Estimate space complexity.
+* Compare estimated complexity against expected complexity configured for the problem.
+* Display a complexity comparison chart.
+* Retrieve the recommended algorithm associated with a problem from the MySQL database.
+* Display an explanation and confidence information when returned by the analysis service.
 
-### Database Management
+Note: Complexity estimates are analytical predictions, not formal proofs of asymptotic complexity. Their availability depends on the configured analysis service and database records.
 
-- User and authentication data
-- Problems and test cases
-- Submissions and execution results
-- User progress
-- Primary and foreign keys
-- Constraints and indexes
-- SQL operations and transactions
+6. OS Execution Engine
 
----
+The execution engine demonstrates Operating System concepts involved in running submitted programs.
 
-## Current Project Status / Progress
+* Process creation using fork()
+* Program execution using exec()
+* Process monitoring using wait4()
+* Inter-Process Communication using pipe()
+* File descriptor redirection using dup2()
+* Resource limits using setrlimit()
+* Process termination using kill()
+* Execution time and resource management
 
-- Project structure created
-- Requirements and system architecture defined
-- Database schema designed
-- `queries.sql` created
-- MySQL database and tables created
-- C++ database connection
-- Submission and job management
-- OS execution engine
-- Scheduler and worker pool
-- Online judge integration
-- Testing and integration
-- Backend API development
-- Authentication implementation
-- Frontend implementation
-- LAN multi-user deployment
+7. Scheduling and Concurrency
 
-### Pending
-- UI Enhancement
+* Job queue for submission processing
+* Scheduler for managing execution jobs
+* Worker pool for concurrent task processing
+* Worker threads
+* Mutexes for shared-resource synchronization
+* Condition variables for coordinating worker activity
+* Concurrent processing of multiple submissions
 
+8. Database Management
+
+MySQL stores and manages the application’s persistent data, including:
+
+* User and authentication data
+* Programming problems
+* Test cases
+* Code submissions
+* Execution results
+* User progress
+* Expected complexity and recommended algorithm information
+
+The database design demonstrates:
+
+* Primary and foreign keys
+* Referential integrity
+* Constraints
+* Normalization
+* Indexes
+* SQL queries
+* Transactions
+* Relationships between application entities
+
+⸻
+
+Current Project Status / Progress
+
+The project includes the following development areas:
+
+* Project structure and requirements definition
+* System architecture and workflow design
+* MySQL database schema design
+* SQL database initialization through queries.sql
+* C++ database connectivity
+* Submission and job management
+* OS-based code execution engine
+* Scheduler and worker pool
+* Online judge integration
+* Backend API development
+* Authentication and session management
+* Frontend implementation
+* Submission history and user progress tracking
+* Complexity-analysis integration
+* Expected complexity and recommended algorithm retrieval
+* Testing and integration
+
+Pending / Future Improvements
+
+* UI enhancement and responsive design
+* Add Messaging features
+* Further security hardening of code execution
+
+⸻
+
+Project Scope
+
+GrowCode is designed as an educational project that demonstrates how Operating System mechanisms and DBMS functionality can be integrated into a practical coding platform.
+
+It provides a foundation for understanding process execution, concurrency, resource management, database design, API communication, and automated program evaluation in a locally hosted environment.
