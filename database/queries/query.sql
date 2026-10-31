@@ -20,3 +20,35 @@ SELECT
     memory_used
 FROM execution_results
 ORDER BY result_id;
+
+
+
+
+
+USE growcode_app;
+
+CREATE TABLE discussions (
+    discussion_id INT AUTO_INCREMENT PRIMARY KEY,
+    problem_id INT NOT NULL,
+    user_id INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_discussions_problem (problem_id),
+    INDEX idx_discussions_user (user_id)
+);
+
+CREATE TABLE discussion_replies (
+    reply_id INT AUTO_INCREMENT PRIMARY KEY,
+    discussion_id INT NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (discussion_id) REFERENCES discussions(discussion_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_replies_discussion (discussion_id)
+);

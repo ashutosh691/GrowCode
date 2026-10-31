@@ -1504,3 +1504,226 @@ bool Database::deleteProblem(int problemId) {
         return false;
     }
 }
+
+
+int Database::createDiscussion(
+    int userId,
+    int problemId,
+    const std::string& title,
+    const std::string& content
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "INSERT INTO discussions (problem_id, user_id, title, content) "
+            "VALUES (?, ?, ?, ?)"
+        ).bind(problemId, userId, title, content).execute();
+
+        return static_cast<int>(result.getAutoIncrementValue());
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Create discussion error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+std::string Database::getDiscussions(int problemId) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "SELECT d.discussion_id, d.user_id, u.username, "
+            "d.title, d.content, "
+            "DATE_FORMAT(d.created_at, '%Y-%m-%d %H:%i:%s') "
+            "FROM discussions d "
+            "JOIN users u ON d.user_id = u.user_id "
+            "WHERE d.problem_id = ? "
+            "ORDER BY d.created_at DESC"
+        ).bind(problemId).execute();
+
+        nlohmann::json discussions = nlohmann::json::array();
+
+        for (const auto& row : result.fetchAll()) {
+            discussions.push_back({
+                {"discussion_id", row[0].get<int>()},
+                {"user_id", row[1].get<int>()},
+                {"username", row[2].get<std::string>()},
+                {"title", row[3].get<std::string>()},
+                {"content", row[4].get<std::string>()},
+                {"created_at", row[5].get<std::string>()}
+            });
+        }
+
+        return discussions.dump();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Get discussions error: " << e.what() << std::endl;
+        return "[]";
+    }
+}
+
+int Database::createDiscussionReply(
+    int userId,
+    int discussionId,
+    const std::string& content
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "INSERT INTO discussion_replies "
+            "(discussion_id, user_id, content) VALUES (?, ?, ?)"
+        ).bind(discussionId, userId, content).execute();
+
+        return static_cast<int>(result.getAutoIncrementValue());
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Create reply error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+std::string Database::getDiscussionReplies(int discussionId) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "SELECT r.reply_id, r.user_id, u.username, r.content, "
+            "DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') "
+            "FROM discussion_replies r "
+            "JOIN users u ON r.user_id = u.user_id "
+            "WHERE r.discussion_id = ? "
+            "ORDER BY r.created_at ASC"
+        ).bind(discussionId).execute();
+
+        nlohmann::json replies = nlohmann::json::array();
+
+        for (const auto& row : result.fetchAll()) {
+            replies.push_back({
+                {"reply_id", row[0].get<int>()},
+                {"user_id", row[1].get<int>()},
+                {"username", row[2].get<std::string>()},
+                {"content", row[3].get<std::string>()},
+                {"created_at", row[4].get<std::string>()}
+            });
+        }
+
+        return replies.dump();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Get replies error: " << e.what() << std::endl;
+        return "[]";
+    }
+}
+
+
+// UPDATE DISCUSSION
+
+bool Database::updateDiscussion(
+    int userId,
+    int discussionId,
+    const std::string& title,
+    const std::string& content
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "UPDATE discussions "
+            "SET title = ?, content = ? "
+            "WHERE discussion_id = ? AND user_id = ?"
+        ).bind(title, content, discussionId, userId).execute();
+
+        return result.getAffectedItemsCount() > 0;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Update discussion error: "
+                  << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+// DELETE DISCUSSION
+
+
+bool Database::deleteDiscussion(
+    int userId,
+    int discussionId
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "DELETE FROM discussions "
+            "WHERE discussion_id = ? AND user_id = ?"
+        ).bind(discussionId, userId).execute();
+
+        return result.getAffectedItemsCount() > 0;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Delete discussion error: "
+                  << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+// UPDATE DISCUSSION REPLY
+
+
+bool Database::updateDiscussionReply(
+    int userId,
+    int replyId,
+    const std::string& content
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "UPDATE discussion_replies "
+            "SET content = ? "
+            "WHERE reply_id = ? AND user_id = ?"
+        ).bind(content, replyId, userId).execute();
+
+        return result.getAffectedItemsCount() > 0;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Update reply error: "
+                  << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+// DELETE DISCUSSION REPLY
+
+bool Database::deleteDiscussionReply(
+    int userId,
+    int replyId
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "DELETE FROM discussion_replies "
+            "WHERE reply_id = ? AND user_id = ?"
+        ).bind(replyId, userId).execute();
+
+        return result.getAffectedItemsCount() > 0;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Delete reply error: "
+                  << e.what() << std::endl;
+        return false;
+    }
+}

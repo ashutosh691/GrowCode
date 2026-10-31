@@ -407,6 +407,672 @@ function setupEditor() {
     updateEditorPlaceholder();
 }
 
+
+// DISCUSSION FUNCTIONALITY
+
+let discussionLoggedIn = false;
+let currentDiscussionUserId = null;
+
+// Check whether the current user is logged in.
+async function checkDiscussionAuth() {
+    try {
+        const response = await fetch("/api/session", {
+            credentials: "include"
+        });
+
+        const session = await response.json();
+
+        discussionLoggedIn = Boolean(session.logged_in);
+
+        currentDiscussionUserId = discussionLoggedIn
+            ? Number(session.user_id)
+            : null;
+
+        const formCard = document.getElementById("discussion-form-card");
+        const loginMessage = document.getElementById("discussion-login-message");
+
+        if (formCard) {
+            formCard.hidden = !discussionLoggedIn;
+        }
+
+        if (loginMessage) {
+            loginMessage.hidden = discussionLoggedIn;
+        }
+
+    } catch (error) {
+        console.error("Could not check login status:", error);
+        discussionLoggedIn = false;
+        currentDiscussionUserId = null;
+    }
+}
+
+
+// Load all discussions for the current problem.
+async function loadDiscussions(problemId) {
+    const discussionList = document.getElementById("discussion-list");
+
+    discussionList.innerHTML =
+        '<p class="discussion-loading">Loading discussions...</p>';
+
+    try {
+        const response = await fetch(
+            `/api/problems/${encodeURIComponent(problemId)}/discussions`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to load discussions.");
+        }
+
+        const discussions = await response.json();
+
+        renderDiscussions(discussions);
+
+    } catch (error) {
+        console.error(error);
+
+        discussionList.innerHTML =
+            '<p class="discussion-empty">Unable to load discussions. Please try again.</p>';
+    }
+}
+
+
+// Render the discussion list.
+function renderDiscussions(discussions) {
+    const discussionList = document.getElementById("discussion-list");
+    const discussionCount = document.getElementById("discussion-count");
+
+    discussionCount.textContent =
+        `${discussions.length} ${discussions.length === 1 ? "discussion" : "discussions"}`;
+
+    if (discussions.length === 0) {
+        discussionList.innerHTML =
+            '<p class="discussion-empty">No discussions yet. Be the first to start one!</p>';
+        return;
+    }
+
+    discussionList.innerHTML = discussions.map(discussion => `
+        <article class="discussion-card" data-discussion-id="${Number(discussion.discussion_id)}">
+
+            <div class="discussion-card-header">
+                <h3>${escapeHTML(discussion.title)}</h3>
+                <span>${escapeHTML(discussion.username)}</span>
+            </div>
+
+            ${discussionLoggedIn &&
+            Number(discussion.user_id) === currentDiscussionUserId ? `
+                <div class="discussion-owner-actions">
+                    <button
+                        type="button"
+                        data-action="edit-discussion"
+                        data-id="${Number(discussion.discussion_id)}"
+                    >
+                        Edit
+                    </button>
+
+                    <button
+                        type="button"
+                        data-action="delete-discussion"
+                        data-id="${Number(discussion.discussion_id)}"
+                    >
+                        Delete
+                    </button>
+                </div>
+            ` : ""}
+
+            <p class="discussion-content">
+                ${escapeHTML(discussion.content)}
+            </p>
+
+            <div class="discussion-card-footer">
+                <span>${escapeHTML(discussion.created_at)}</span>
+
+                <button
+                    type="button"
+                    class="discussion-action"
+                    data-action="toggle-replies"
+                    data-id="${Number(discussion.discussion_id)}"
+                >
+                    View replies
+                </button>
+            </div>
+
+            <div
+                class="discussion-replies"
+                id="replies-${Number(discussion.discussion_id)}"
+                hidden
+            ></div>
+
+        </article>
+    `).join("");
+}
+
+
+// Load replies for a particular discussion.
+async function loadDiscussionReplies(discussionId) {
+    const repliesContainer = document.getElementById(
+        `replies-${discussionId}`
+    );
+
+    repliesContainer.hidden = false;
+    repliesContainer.innerHTML =
+        '<p class="discussion-loading">Loading replies...</p>';
+
+    try {
+        const response = await fetch(
+            `/api/discussions/${discussionId}/replies`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to load replies.");
+        }
+
+        const replies = await response.json();
+
+        renderReplies(discussionId, replies);
+
+    } catch (error) {
+        console.error(error);
+
+        repliesContainer.innerHTML =
+            '<p class="discussion-empty">Unable to load replies.</p>';
+    }
+}
+
+
+// Render replies and the reply form.
+function renderReplies(discussionId, replies) {
+    const repliesContainer = document.getElementById(
+        `replies-${discussionId}`
+    );
+
+    let html = "";
+
+    if (replies.length === 0) {
+        html += '<p class="discussion-empty">No replies yet.</p>';
+    } else {
+        html += replies.map(reply => `
+            <div class="discussion-reply">
+                <div class="discussion-reply-header">
+                    <strong>${escapeHTML(reply.username)}</strong>
+                    <span>${escapeHTML(reply.created_at)}</span>
+                </div>
+
+                <p>${escapeHTML(reply.content)}</p>
+
+                ${discussionLoggedIn &&
+                Number(reply.user_id) === currentDiscussionUserId ? `
+                    <div class="discussion-owner-actions">
+                        <button
+                            type="button"
+                            data-action="edit-reply"
+                            data-id="${Number(reply.reply_id)}"
+                            data-discussion-id="${discussionId}"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            type="button"
+                            data-action="delete-reply"
+                            data-id="${Number(reply.reply_id)}"
+                            data-discussion-id="${discussionId}"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                ` : ""}
+            </div>
+        `).join("");
+    }
+
+    if (discussionLoggedIn) {
+        html += `
+            <form class="discussion-reply-form" data-id="${discussionId}">
+                <textarea
+                    name="reply-content"
+                    rows="2"
+                    placeholder="Write a reply..."
+                    required
+                ></textarea>
+
+                <button type="submit">Post reply</button>
+            </form>
+        `;
+    } else {
+        html += `
+            <p class="discussion-login-reply">
+                <a href="/login.html">Log in</a> to reply.
+            </p>
+        `;
+    }
+
+    repliesContainer.innerHTML = html;
+}
+
+
+// Create a new discussion.
+async function createDiscussion(event, problemId) {
+    event.preventDefault();
+
+    const titleInput = document.getElementById("discussion-title");
+    const contentInput = document.getElementById("discussion-content");
+    const feedback = document.getElementById("discussion-feedback");
+    const submitButton = document.getElementById("discussion-submit");
+
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+
+    if (!title || !content) {
+        feedback.textContent = "Please fill in both fields.";
+        return;
+    }
+
+    submitButton.disabled = true;
+    feedback.textContent = "Posting...";
+
+    try {
+        const response = await fetch(
+            `/api/problems/${encodeURIComponent(problemId)}/discussions`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify({ title, content })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Could not post discussion.");
+        }
+
+        titleInput.value = "";
+        contentInput.value = "";
+
+        feedback.textContent = "Discussion posted successfully.";
+
+        await loadDiscussions(problemId);
+
+    } catch (error) {
+        feedback.textContent = error.message;
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
+
+// Create a reply to a discussion.
+async function createDiscussionReply(event, discussionId) {
+    event.preventDefault();
+
+    const form = event.target;
+    const textarea = form.querySelector("textarea");
+    const content = textarea.value.trim();
+    const button = form.querySelector("button");
+
+    if (!content) {
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Posting...";
+
+    try {
+        const response = await fetch(
+            `/api/discussions/${discussionId}/replies`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify({ content })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Could not post reply.");
+        }
+
+        await loadDiscussionReplies(discussionId);
+
+    } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.textContent = "Post reply";
+    }
+}
+
+// Open the inline discussion editor.
+function startDiscussionEdit(button) {
+    const card = button.closest(".discussion-card");
+
+    if (card.querySelector(".discussion-edit-form")) {
+        return;
+    }
+
+    const discussionId = Number(card.dataset.discussionId);
+    const title = card.querySelector(".discussion-card-header h3").textContent;
+    const content = card.querySelector(".discussion-content").textContent;
+
+    const form = document.createElement("form");
+    form.className = "discussion-edit-form";
+
+    form.innerHTML = `
+        <label>Discussion title</label>
+        <input
+            type="text"
+            name="title"
+            maxlength="200"
+            value="${escapeHTML(title)}"
+            required
+        >
+
+        <label>Discussion content</label>
+        <textarea name="content" rows="4" required>${escapeHTML(content)}</textarea>
+
+        <div class="discussion-edit-actions">
+            <button type="submit">Save changes</button>
+            <button
+                type="button"
+                data-action="cancel-edit"
+                data-kind="discussion"
+            >
+                Cancel
+            </button>
+        </div>
+    `;
+
+    card.classList.add("is-editing");
+    card.querySelector(".discussion-card-footer").before(form);
+}
+
+
+// Open the inline reply editor.
+function startReplyEdit(button) {
+    const reply = button.closest(".discussion-reply");
+
+    if (reply.querySelector(".reply-edit-form")) {
+        return;
+    }
+
+    const content = reply.querySelector("p").textContent;
+    const discussionId = Number(button.dataset.discussionId);
+
+    const form = document.createElement("form");
+    form.className = "reply-edit-form";
+    form.dataset.discussionId = discussionId;
+
+    form.innerHTML = `
+        <textarea name="content" rows="3" required>${escapeHTML(content)}</textarea>
+
+        <div class="discussion-edit-actions">
+            <button type="submit">Save changes</button>
+            <button
+                type="button"
+                data-action="cancel-edit"
+                data-kind="reply"
+            >
+                Cancel
+            </button>
+        </div>
+    `;
+
+    reply.classList.add("is-editing");
+    reply.appendChild(form);
+}
+
+
+// Discussion section
+function setupDiscussionEvents(problemId) {
+    const discussionForm = document.getElementById("discussion-form");
+    const discussionList = document.getElementById("discussion-list");
+
+    discussionForm.addEventListener("submit", event => {
+        createDiscussion(event, problemId);
+    });
+
+    discussionList.addEventListener("click", async event => {
+        const button = event.target.closest("[data-action]");
+
+        if (!button) return;
+
+        const action = button.dataset.action;
+
+        // Cancel inline editing
+        if (action === "cancel-edit") {
+            const container = button.closest(
+                button.dataset.kind === "discussion"
+                    ? ".discussion-card"
+                    : ".discussion-reply"
+            );
+
+            const form = button.closest("form");
+
+            if (form) form.remove();
+            if (container) container.classList.remove("is-editing");
+
+            return;
+        }
+
+        const id = Number(button.dataset.id);
+
+        if (!Number.isSafeInteger(id) || id <= 0) {
+            return;
+        }
+
+        // Edit discussion
+        if (action === "edit-discussion") {
+            startDiscussionEdit(button);
+            return;
+        }
+
+        // Delete discussion
+        if (action === "delete-discussion") {
+            if (!confirm("Are you sure you want to delete this discussion?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/discussions/${id}`, {
+                    method: "DELETE",
+                    credentials: "include"
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || "Failed to delete discussion."
+                    );
+                }
+
+                await loadDiscussions(problemId);
+            } catch (error) {
+                alert(error.message);
+            }
+
+            return;
+        }
+
+        // Edit reply
+        if (action === "edit-reply") {
+            startReplyEdit(button);
+            return;
+        }
+
+        // Delete reply
+        if (action === "delete-reply") {
+            if (!confirm("Are you sure you want to delete this reply?")) {
+                return;
+            }
+
+            const discussionId = Number(button.dataset.discussionId);
+
+            try {
+                const response = await fetch(
+                    `/api/discussion-replies/${id}`,
+                    {
+                        method: "DELETE",
+                        credentials: "include"
+                    }
+                );
+
+                const result = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || "Failed to delete reply."
+                    );
+                }
+
+                await loadDiscussionReplies(discussionId);
+            } catch (error) {
+                alert(error.message);
+            }
+
+            return;
+        }
+
+        // Show or hide replies
+        if (action === "toggle-replies") {
+            const repliesContainer = document.getElementById(`replies-${id}`);
+
+            if (!repliesContainer.hidden) {
+                repliesContainer.hidden = true;
+                button.textContent = "View replies";
+                return;
+            }
+
+            button.textContent = "Hide replies";
+            await loadDiscussionReplies(id);
+        }
+    });
+
+    discussionList.addEventListener("submit", async event => {
+        const form = event.target;
+
+        // Update discussion
+        if (form.matches(".discussion-edit-form")) {
+            event.preventDefault();
+
+            const card = form.closest(".discussion-card");
+            const discussionId = Number(card.dataset.discussionId);
+
+            const title = form.elements.title.value.trim();
+            const content = form.elements.content.value.trim();
+
+            if (!title || !content) {
+                alert("Title and content cannot be empty.");
+                return;
+            }
+
+            const saveButton = form.querySelector('[type="submit"]');
+            saveButton.disabled = true;
+
+            try {
+                const response = await fetch(
+                    `/api/discussions/${discussionId}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        credentials: "include",
+                        body: JSON.stringify({ title, content })
+                    }
+                );
+
+                const result = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || "Failed to update discussion."
+                    );
+                }
+
+                await loadDiscussions(problemId);
+            } catch (error) {
+                alert(error.message);
+                saveButton.disabled = false;
+            }
+
+            return;
+        }
+
+        // Update reply
+        if (form.matches(".reply-edit-form")) {
+            event.preventDefault();
+
+            const reply = form.closest(".discussion-reply");
+            const editButton = reply.querySelector(
+                '[data-action="edit-reply"]'
+            );
+
+            if (!editButton) return;
+
+            const replyId = Number(editButton.dataset.id);
+            const discussionId = Number(form.dataset.discussionId);
+            const content = form.elements.content.value.trim();
+
+            if (!content) {
+                alert("Reply content cannot be empty.");
+                return;
+            }
+
+            const saveButton = form.querySelector('[type="submit"]');
+            saveButton.disabled = true;
+
+            try {
+                const response = await fetch(
+                    `/api/discussion-replies/${replyId}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        credentials: "include",
+                        body: JSON.stringify({ content })
+                    }
+                );
+
+                const result = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || "Failed to update reply."
+                    );
+                }
+
+                await loadDiscussionReplies(discussionId);
+            } catch (error) {
+                alert(error.message);
+                saveButton.disabled = false;
+            }
+
+            return;
+        }
+
+        // Create reply
+        if (form.matches(".discussion-reply-form")) {
+            const discussionId = Number(form.dataset.id);
+
+            if (!Number.isSafeInteger(discussionId) || discussionId <= 0) {
+                return;
+            }
+
+            createDiscussionReply(event, discussionId);
+        }
+    });
+}
+
+
+
 async function loadProblem() {
     const container = document.getElementById("problem-container");
     const problemId = new URLSearchParams(window.location.search).get("id");
@@ -472,11 +1138,75 @@ async function loadProblem() {
                     <div class="submit-area"><p class="submit-note">Your solution will be checked against the test cases.</p><button id="submit-button" type="button"><span aria-hidden="true">↑</span> Submit solution</button></div>
                     <div id="submission-message" class="submission-message" role="status" aria-live="polite"><span class="submission-status-icon" aria-hidden="true">i</span><span class="submission-message-copy"><strong>Ready to submit</strong><small>Your verdict will appear here after submission.</small></span></div>
                     <div class="editor-bottom-note"><span aria-hidden="true">⌁</span> Powered by the GrowCode execution engine</div>
-                </aside>
-            </div>`;
+                                </aside>
+            </div>
+
+            <!-- Discussion section -->
+            <section class="discussion-section" id="discussion-section">
+
+                <div class="discussion-header">
+                    <div>
+                        <span class="editor-eyebrow">COMMUNITY</span>
+                        <h2>Discussions</h2>
+                        <p>Ask questions and discuss approaches to this problem.</p>
+                    </div>
+
+                    <span id="discussion-count" class="discussion-count">0 discussions</span>
+                </div>
+
+                <div class="discussion-form-card" id="discussion-form-card">
+
+                    <h3>Start a discussion</h3>
+
+                    <form id="discussion-form">
+
+                        <label for="discussion-title">Title</label>
+
+                        <input
+                            type="text"
+                            id="discussion-title"
+                            maxlength="200"
+                            placeholder="What would you like to discuss?"
+                            required
+                        >
+
+                        <label for="discussion-content">Your question</label>
+
+                        <textarea
+                            id="discussion-content"
+                            rows="4"
+                            placeholder="Explain your question or share your approach..."
+                            required
+                        ></textarea>
+
+                        <div class="discussion-form-footer">
+                            <p id="discussion-feedback" role="status"></p>
+
+                            <button type="submit" id="discussion-submit">
+                                Post discussion
+                            </button>
+                        </div>
+
+                    </form>
+
+                    <p id="discussion-login-message" hidden>
+                        Please <a href="/login.html">log in</a> to start a discussion.
+                    </p>
+
+                </div>
+
+                <div id="discussion-list" class="discussion-list">
+                    <p class="discussion-loading">Loading discussions...</p>
+                </div>
+
+            </section>`;
 
         setupEditor();
         document.getElementById("submit-button").addEventListener("click", () => submitSolution(problemId));
+        // Initialize discussions.
+        await checkDiscussionAuth();
+        setupDiscussionEvents(problemId);
+        await loadDiscussions(problemId);
     } catch (error) {
         console.error(error);
         container.innerHTML = '<div class="problem-load-error"><strong>Unable to load this problem</strong><p>Check your connection and try again.</p><button type="button" onclick="location.reload()">Try again</button></div>';

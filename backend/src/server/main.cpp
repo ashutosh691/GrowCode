@@ -1,6 +1,6 @@
 // Build -  
 // cd ~/Desktop/GrowCode
-// export GEMINI_API_KEY="Your_API"
+// export GEMINI_API_KEY="API KEY"
 // rm -rf build
 // mkdir build
 // cd build
@@ -1146,6 +1146,576 @@ server.Get(R"(/api/problems/(\d+))",
             );
         }
     });
+
+    // DISCUSSION API ROUTES
+
+    // 1. Get all discussions for a problem
+    server.Get(
+        R"(/api/problems/(\d+)/discussions)",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int problemId = std::stoi(req.matches[1].str());
+
+                if (problemId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid problem ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string discussions =
+                    database.getDiscussions(problemId);
+
+                res.set_content(discussions, "application/json");
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Get discussions error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to retrieve discussions"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+
+    // 2. Create a discussion for a problem
+    server.Post(
+        R"(/api/problems/(\d+)/discussions)",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int userId = 0;
+
+                if (!getUserIdFromSession(req, userId)) {
+                    res.status = 401;
+                    res.set_content(
+                        R"({"error":"Authentication required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int problemId = std::stoi(req.matches[1].str());
+
+                if (problemId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid problem ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                auto body = nlohmann::json::parse(req.body);
+
+                if (!body.is_object() ||
+                    !body.contains("title") ||
+                    !body.contains("content") ||
+                    !body["title"].is_string() ||
+                    !body["content"].is_string()) {
+
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Title and content are required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string title = body["title"].get<std::string>();
+                std::string content = body["content"].get<std::string>();
+
+                if (title.empty() || content.empty() ||
+                    title.size() > 200) {
+
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Title must be 1-200 characters and content cannot be empty"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int discussionId = database.createDiscussion(
+                    userId,
+                    problemId,
+                    title,
+                    content
+                );
+
+                if (discussionId <= 0) {
+                    res.status = 500;
+                    res.set_content(
+                        R"({"error":"Failed to create discussion"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                nlohmann::json response = {
+                    {"message", "Discussion created successfully"},
+                    {"discussion_id", discussionId}
+                };
+
+                res.status = 201;
+                res.set_content(response.dump(), "application/json");
+            }
+            catch (const nlohmann::json::exception& e) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Invalid JSON request body"})",
+                    "application/json"
+                );
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Create discussion error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to create discussion"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+
+    // 3. Get all replies for a discussion
+    server.Get(
+        R"(/api/discussions/(\d+)/replies)",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int discussionId = std::stoi(req.matches[1].str());
+
+                if (discussionId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid discussion ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string replies =
+                    database.getDiscussionReplies(discussionId);
+
+                res.set_content(replies, "application/json");
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Get replies error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to retrieve replies"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+
+    // 4. Create a reply for a discussion
+    server.Post(
+        R"(/api/discussions/(\d+)/replies)",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int userId = 0;
+
+                if (!getUserIdFromSession(req, userId)) {
+                    res.status = 401;
+                    res.set_content(
+                        R"({"error":"Authentication required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int discussionId = std::stoi(req.matches[1].str());
+
+                if (discussionId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid discussion ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                auto body = nlohmann::json::parse(req.body);
+
+                if (!body.is_object() ||
+                    !body.contains("content") ||
+                    !body["content"].is_string()) {
+
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Reply content is required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string content = body["content"].get<std::string>();
+
+                if (content.empty()) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Reply content cannot be empty"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int replyId = database.createDiscussionReply(
+                    userId,
+                    discussionId,
+                    content
+                );
+
+                if (replyId <= 0) {
+                    res.status = 500;
+                    res.set_content(
+                        R"({"error":"Failed to create reply"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                nlohmann::json response = {
+                    {"message", "Reply created successfully"},
+                    {"reply_id", replyId}
+                };
+
+                res.status = 201;
+                res.set_content(response.dump(), "application/json");
+            }
+            catch (const nlohmann::json::exception& e) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Invalid JSON request body"})",
+                    "application/json"
+                );
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Create reply error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to create reply"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+    // Update a discussion
+    server.Put(
+        R"(/api/discussions/(\d+))",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int userId = 0;
+
+                if (!getUserIdFromSession(req, userId)) {
+                    res.status = 401;
+                    res.set_content(
+                        R"({"error":"Authentication required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int discussionId = std::stoi(req.matches[1].str());
+
+                if (discussionId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid discussion ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                auto body = nlohmann::json::parse(req.body);
+
+                if (!body.is_object() ||
+                    !body.contains("title") ||
+                    !body.contains("content") ||
+                    !body["title"].is_string() ||
+                    !body["content"].is_string()) {
+
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Title and content are required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string title = body["title"].get<std::string>();
+                std::string content = body["content"].get<std::string>();
+
+                if (title.find_first_not_of(" \t\n\r") == std::string::npos ||
+                    content.find_first_not_of(" \t\n\r") == std::string::npos) {
+
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Title and content cannot be empty"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                bool updated = database.updateDiscussion(
+                    userId, discussionId, title, content
+                );
+
+                if (!updated) {
+                    res.status = 404;
+                    res.set_content(
+                        R"({"error":"Discussion not found or you do not own it"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                res.set_content(
+                    R"({"message":"Discussion updated successfully"})",
+                    "application/json"
+                );
+            }
+            catch (const nlohmann::json::exception& e) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Invalid JSON request body"})",
+                    "application/json"
+                );
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Update discussion route error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to update discussion"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+    // Delete a discussion
+    server.Delete(
+        R"(/api/discussions/(\d+))",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int userId = 0;
+
+                if (!getUserIdFromSession(req, userId)) {
+                    res.status = 401;
+                    res.set_content(
+                        R"({"error":"Authentication required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int discussionId = std::stoi(req.matches[1].str());
+
+                if (discussionId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid discussion ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                bool deleted = database.deleteDiscussion(
+                    userId, discussionId
+                );
+
+                if (!deleted) {
+                    res.status = 404;
+                    res.set_content(
+                        R"({"error":"Discussion not found or you do not own it"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                res.set_content(
+                    R"({"message":"Discussion deleted successfully"})",
+                    "application/json"
+                );
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Delete discussion route error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to delete discussion"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+    // Update a reply
+    server.Put(
+        R"(/api/discussion-replies/(\d+))",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int userId = 0;
+
+                if (!getUserIdFromSession(req, userId)) {
+                    res.status = 401;
+                    res.set_content(
+                        R"({"error":"Authentication required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int replyId = std::stoi(req.matches[1].str());
+
+                if (replyId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid reply ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                auto body = nlohmann::json::parse(req.body);
+
+                if (!body.is_object() ||
+                    !body.contains("content") ||
+                    !body["content"].is_string()) {
+
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Reply content is required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string content = body["content"].get<std::string>();
+
+                if (content.find_first_not_of(" \t\n\r") == std::string::npos) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Reply content cannot be empty"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                bool updated = database.updateDiscussionReply(
+                    userId, replyId, content
+                );
+
+                if (!updated) {
+                    res.status = 404;
+                    res.set_content(
+                        R"({"error":"Reply not found or you do not own it"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                res.set_content(
+                    R"({"message":"Reply updated successfully"})",
+                    "application/json"
+                );
+            }
+            catch (const nlohmann::json::exception& e) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Invalid JSON request body"})",
+                    "application/json"
+                );
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Update reply route error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to update reply"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+    // Delete a reply
+    server.Delete(
+        R"(/api/discussion-replies/(\d+))",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            try {
+                int userId = 0;
+
+                if (!getUserIdFromSession(req, userId)) {
+                    res.status = 401;
+                    res.set_content(
+                        R"({"error":"Authentication required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                int replyId = std::stoi(req.matches[1].str());
+
+                if (replyId <= 0) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid reply ID"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                bool deleted = database.deleteDiscussionReply(
+                    userId, replyId
+                );
+
+                if (!deleted) {
+                    res.status = 404;
+                    res.set_content(
+                        R"({"error":"Reply not found or you do not own it"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                res.set_content(
+                    R"({"message":"Reply deleted successfully"})",
+                    "application/json"
+                );
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Delete reply route error: "
+                        << e.what() << std::endl;
+
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to delete reply"})",
+                    "application/json"
+                );
+            }
+        }
+    );
 
     server.set_mount_point("/", "../frontend");
 

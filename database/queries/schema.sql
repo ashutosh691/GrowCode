@@ -171,35 +171,6 @@ create table user_progress (
     foreign key (problem_id) references problems(problem_id) on delete cascade
 );
 
-
-/*
-this is tags table
-this table stores tags which can be assigned to programming problems
-tag name is required to be unique so duplicate tags cannot be created
-*/
-create table tags (
-    tag_id int auto_increment primary key,
-    name varchar(50) not null unique
-);
-
-
-/*
-this is problem_tags table
-this is a junction table used to create a many-to-many relationship
-between problems and tags
-one problem can have multiple tags
-one tag can be assigned to multiple problems
-the combination of problem_id and tag_id is used as the primary key
-so the same tag cannot be assigned to the same problem more than once
-*/
-create table problem_tags (
-    problem_id int not null, tag_id int not null,
-    primary key (problem_id, tag_id),
-    foreign key (problem_id) references problems(problem_id) on delete cascade,
-    foreign key (tag_id) references tags(tag_id) on delete cascade
-);
-
-
 /*
 this index is created on problem_id in test_cases
 it improves the speed of queries that search for test cases

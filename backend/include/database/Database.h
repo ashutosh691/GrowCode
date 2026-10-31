@@ -119,6 +119,33 @@ public:
             int userId,
             int submissionId
         );
+
+        // methods for discussion section
+        int createDiscussion(int userId, int problemId,
+            const std::string& title,
+            const std::string& content);
+
+        std::string getDiscussions(int problemId);
+
+        int createDiscussionReply(int userId, int discussionId,
+                        const std::string& content);
+
+        std::string getDiscussionReplies(int discussionId);
+        
+        // methods for editing and deleting discussions
+
+        bool updateDiscussion(int userId, int discussionId,
+            const std::string& title,
+            const std::string& content);
+
+        bool deleteDiscussion(int userId, int discussionId);
+
+        // methods for editing and deleting replies
+
+        bool updateDiscussionReply(int userId, int replyId,
+            const std::string& content);
+
+        bool deleteDiscussionReply(int userId, int replyId);
 };
 
 #endif
