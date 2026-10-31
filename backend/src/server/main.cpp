@@ -1,6 +1,6 @@
 // Build -  
 // cd ~/Desktop/GrowCode
-// export GEMINI_API_KEY="API KEY"
+// export GEMINI_API_KEY="API"
 // rm -rf build
 // mkdir build
 // cd build
@@ -16,6 +16,7 @@
 // IP:8080 in browser
 
 // Command for find ip -  ipconfig getifaddr en0
+// Command for docker activity - docker events --filter type=container
 #include <iostream>
 #include <sstream>
 #include <nlohmann/json.hpp>
@@ -28,6 +29,7 @@
 #include "execution_engine/scheduler/Scheduler.h"
 #include "execution_engine/workers/WorkerPool.h"
 #include "execution_engine/executor/ExecutionWorker.h"
+#include "execution_engine/executor/RunCodeExecutor.h"
 #include "complexity/ComplexityAnalyzer.h"
 
 std::unordered_map<std::string, int> sessions;
@@ -1001,6 +1003,108 @@ server.Get(R"(/api/problems/(\d+))",
             );
         }
     });
+
+
+    server.Post("/api/run", [&](const httplib::Request& req, httplib::Response& res) {
+        try {
+            int userId = 0;
+
+            if (!getUserIdFromSession(req, userId)) {
+                res.status = 401;
+                res.set_content(
+                    R"({"error":"Authentication required"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            auto json = nlohmann::json::parse(req.body);
+
+            if (!json.is_object() ||
+                !json.contains("code") ||
+                !json.contains("language_id") ||
+                !json.contains("input") ||
+                !json["code"].is_string() ||
+                !json["language_id"].is_number_integer() ||
+                !json["input"].is_string()) {
+
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Invalid or missing fields"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            std::string code = json["code"].get<std::string>();
+            int languageId = json["language_id"].get<int>();
+            std::string input = json["input"].get<std::string>();
+
+            if (code.empty()) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Source code cannot be empty"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            if (code.size() > 65536 || input.size() > 65536) {
+                res.status = 413;
+                res.set_content(
+                    R"({"error":"Code or input exceeds the 64 KB limit"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            if (languageId < 1 || languageId > 3) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"Unsupported programming language"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            RunCodeResult result = RunCodeExecutor::execute(
+                code,
+                languageId,
+                input
+            );
+
+            nlohmann::json response = {
+                {"status", result.status},
+                {"output", result.output},
+                {"error", result.error},
+                {"execution_time", result.executionTime},
+                {"memory_used", result.memoryUsed}
+            };
+
+            res.status = 200;
+            res.set_content(
+                response.dump(),
+                "application/json"
+            );
+        }
+        catch (const nlohmann::json::exception& e) {
+            res.status = 400;
+            res.set_content(
+                R"({"error":"Invalid JSON request"})",
+                "application/json"
+            );
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Run code error: " << e.what() << std::endl;
+
+            res.status = 500;
+            res.set_content(
+                R"({"error":"Internal server error"})",
+                "application/json"
+            );
+        }
+    });
+
 
     // Optional AI complexity analysis. Failure here is isolated from judging.
     server.Post("/api/complexity/analyze", [&](const httplib::Request& req, httplib::Response& res) {

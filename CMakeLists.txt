@@ -31,8 +31,13 @@ add_executable(growcode
     # Execution Engine - Execution Worker
     execution_engine/executor/ExecutionWorker.cpp
 
+    # Execution Engine - Run Code Executor
+    execution_engine/executor/RunCodeExecutor.cpp
+
     # Execution Engine - Worker Pool
     execution_engine/workers/WorkerPool.cpp
+
+    execution_engine/sandbox/SandboxManager.cpp
 )
 
 target_include_directories(growcode PRIVATE

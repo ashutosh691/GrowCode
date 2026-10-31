@@ -1,5 +1,6 @@
 
 #include "ProcessManager.h"
+#include "../sandbox/SandboxManager.h"
 
 #include <iostream>
 #include <vector>
@@ -11,9 +12,10 @@
 #include <chrono>
 #include <thread>
 #include <cerrno>
+#include <algorithm>
+#include <climits>
 
-// Executes a program and tracks its input, output, execution time, and memory usage.
-// This wrapper preserves compatibility with the existing C++ execution path.
+// Preserve compatibility with the existing executable interface.
 int ProcessManager::runProcess(
     const std::string& executable,
     const std::string& inputFile,
@@ -28,11 +30,12 @@ int ProcessManager::runProcess(
         outputFile,
         workingDirectory,
         memoryUsed,
-        errorFile
+        errorFile,
+        SandboxConfig{}
     );
 }
 
-// Executes a program with command-line arguments.
+// Preserve compatibility with existing vector-based calls.
 int ProcessManager::runProcess(
     const std::vector<std::string>& command,
     const std::string& inputFile,
@@ -41,56 +44,84 @@ int ProcessManager::runProcess(
     long long& memoryUsed,
     const std::string& errorFile
 ) {
-    // Initialize memory usage to zero.
+    return runProcess(
+        command,
+        inputFile,
+        outputFile,
+        workingDirectory,
+        memoryUsed,
+        errorFile,
+        SandboxConfig{}
+    );
+}
+
+// Execute a program using the supplied sandbox configuration.
+int ProcessManager::runProcess(
+    const std::vector<std::string>& command,
+    const std::string& inputFile,
+    const std::string& outputFile,
+    const std::string& workingDirectory,
+    long long& memoryUsed,
+    const std::string& errorFile,
+    const SandboxConfig& config
+) {
     memoryUsed = 0;
 
-    // Validate the command.
     if (command.empty() || command[0].empty()) {
         return -1;
     }
 
-    // Create a pipe for communication between the parent and child.
     int pipeFd[2];
 
     if (pipe(pipeFd) != 0) {
         return -1;
     }
 
-    // Create a child process.
     pid_t pid = fork();
 
-    // Check whether process creation failed.
     if (pid < 0) {
         close(pipeFd[0]);
         close(pipeFd[1]);
         return -1;
     }
 
-    // Child process.
     if (pid == 0) {
-        // Child does not need the read end of the pipe.
         close(pipeFd[0]);
 
-        // Set CPU resource limits.
+        // Enforce CPU time limit.
         struct rlimit cpuLimit {};
 
-        cpuLimit.rlim_cur = 2;
-        cpuLimit.rlim_max = 2;
+        cpuLimit.rlim_cur = config.cpuTimeLimitSeconds;
+        cpuLimit.rlim_max = config.cpuTimeLimitSeconds;
 
-        setrlimit(RLIMIT_CPU, &cpuLimit);
+        if (setrlimit(RLIMIT_CPU, &cpuLimit) != 0) {
+            _exit(1);
+        }
 
-        // Change the child's working directory.
+        // Apply an address-space limit where supported.
+#ifdef RLIMIT_AS
+        if (config.memoryLimitBytes > 0) {
+            struct rlimit memoryLimit {};
+
+            memoryLimit.rlim_cur =
+                static_cast<rlim_t>(config.memoryLimitBytes);
+
+            memoryLimit.rlim_max =
+                static_cast<rlim_t>(config.memoryLimitBytes);
+
+            setrlimit(RLIMIT_AS, &memoryLimit);
+        }
+#endif
+
         if (chdir(workingDirectory.c_str()) != 0) {
             _exit(1);
         }
 
-        // Notify the parent that execution is starting.
         const char message[] = "EXECUTION_STARTED";
 
         write(pipeFd[1], message, sizeof(message));
         close(pipeFd[1]);
 
-        // Open input and standard-output files.
         int inputFd = open(inputFile.c_str(), O_RDONLY);
 
         int outputFd = open(
@@ -99,8 +130,8 @@ int ProcessManager::runProcess(
             0644
         );
 
-        // If requested, capture standard error separately from program output.
         int errorFd = -1;
+
         if (!errorFile.empty()) {
             errorFd = open(
                 errorFile.c_str(),
@@ -111,37 +142,44 @@ int ProcessManager::runProcess(
 
         if (inputFd < 0 || outputFd < 0 ||
             (!errorFile.empty() && errorFd < 0)) {
+
             if (inputFd >= 0) close(inputFd);
             if (outputFd >= 0) close(outputFd);
             if (errorFd >= 0) close(errorFd);
+
             _exit(1);
         }
 
-        // Redirect standard input and standard output.
         if (dup2(inputFd, STDIN_FILENO) < 0 ||
             dup2(outputFd, STDOUT_FILENO) < 0) {
+
             close(inputFd);
             close(outputFd);
+
             if (errorFd >= 0) close(errorFd);
+
             _exit(1);
         }
 
-        // Redirect standard error when a diagnostic file was supplied.
-        if (errorFd >= 0 && dup2(errorFd, STDERR_FILENO) < 0) {
+        if (errorFd >= 0 &&
+            dup2(errorFd, STDERR_FILENO) < 0) {
+
             close(inputFd);
             close(outputFd);
             close(errorFd);
+
             _exit(1);
         }
 
-        // Close the original file descriptors after redirection.
         close(inputFd);
         close(outputFd);
-        if (errorFd >= 0) close(errorFd);
 
-        // Build the argument array required by execvp().
-        // The command strings remain alive in the child process.
+        if (errorFd >= 0) {
+            close(errorFd);
+        }
+
         std::vector<char*> args;
+
         args.reserve(command.size() + 1);
 
         for (const std::string& arg : command) {
@@ -150,18 +188,13 @@ int ProcessManager::runProcess(
 
         args.push_back(nullptr);
 
-        // Replace the child process with the requested program.
-        // execvp searches PATH for commands such as java and python3.
         execvp(args[0], args.data());
 
-        // If execvp returns, launching the program failed.
         _exit(127);
     }
 
-    // Parent does not need the write end of the pipe.
     close(pipeFd[1]);
 
-    // Receive the execution-start message.
     char message[64] = {};
 
     ssize_t bytesRead = read(
@@ -178,22 +211,28 @@ int ProcessManager::runProcess(
 
     std::cout << "IPC message: " << message << std::endl;
 
-    // Child process status and resource usage.
     int status = 0;
     struct rusage usage {};
 
-    // Maximum allowed wall-clock execution time.
-    const double timeLimit = 2.0;
+    const double timeLimit =
+        config.wallTimeLimitSeconds > 0
+            ? config.wallTimeLimitSeconds
+            : 2.0;
 
     auto startTime = std::chrono::steady_clock::now();
 
-    // Continuously monitor the child process.
     while (true) {
-        pid_t result = wait4(pid, &status, WNOHANG, &usage);
+        pid_t result = wait4(
+            pid,
+            &status,
+            WNOHANG,
+            &usage
+        );
 
-        // Child process has finished.
         if (result == pid) {
-            memoryUsed = static_cast<long long>(usage.ru_maxrss);
+            memoryUsed = static_cast<long long>(
+                usage.ru_maxrss
+            );
 
             if (WIFEXITED(status)) {
                 return WEXITSTATUS(status);
@@ -206,7 +245,6 @@ int ProcessManager::runProcess(
             return -1;
         }
 
-        // wait4() failed.
         if (result < 0) {
             if (errno == EINTR) {
                 continue;
@@ -221,24 +259,22 @@ int ProcessManager::runProcess(
             currentTime - startTime
         ).count();
 
-        // Time limit exceeded.
         if (elapsed >= timeLimit) {
             kill(pid, SIGKILL);
 
-            // Reap the terminated child and collect resource usage.
             while (wait4(pid, &status, 0, &usage) < 0) {
                 if (errno != EINTR) {
                     return -1;
                 }
             }
 
-            memoryUsed = static_cast<long long>(usage.ru_maxrss);
+            memoryUsed = static_cast<long long>(
+                usage.ru_maxrss
+            );
 
-            // -2 indicates Time Limit Exceeded.
             return -2;
         }
 
-        // Wait briefly before checking again.
         std::this_thread::sleep_for(
             std::chrono::milliseconds(10)
         );

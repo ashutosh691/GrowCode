@@ -357,6 +357,95 @@ async function submitSolution(problemId) {
     }
 }
 
+
+async function runCode() {
+    const editor = document.getElementById("code-editor");
+    const languageSelect = document.getElementById("language-select");
+    const inputField = document.getElementById("custom-input");
+    const runButton = document.getElementById("run-code-button");
+
+    const resultPanel = document.getElementById("run-code-result");
+    const statusElement = document.getElementById("run-code-status");
+    const timeElement = document.getElementById("run-code-time");
+    const outputElement = document.getElementById("run-code-output");
+    const errorContainer = document.getElementById("run-code-error-container");
+    const errorElement = document.getElementById("run-code-error");
+
+    const code = editor.value;
+    const languageId = Number(languageSelect.value);
+    const input = inputField.value;
+
+    if (!code.trim()) {
+        alert("Write your code before running it.");
+        editor.focus();
+        return;
+    }
+
+    if (![1, 2, 3].includes(languageId)) {
+        alert("Please select a supported programming language.");
+        return;
+    }
+
+    runButton.disabled = true;
+    runButton.textContent = "Running...";
+    resultPanel.hidden = false;
+
+    statusElement.textContent = "Executing...";
+    timeElement.textContent = "";
+    outputElement.textContent = "";
+    errorElement.textContent = "";
+    errorContainer.hidden = true;
+
+    try {
+        const response = await fetch("/api/run", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                code: code,
+                language_id: languageId,
+                input: input
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Code execution request failed.");
+        }
+
+        statusElement.textContent =
+            String(result.status || "UNKNOWN").replaceAll("_", " ");
+
+        outputElement.textContent = result.output ?? "";
+
+        if (result.error) {
+            errorElement.textContent = result.error;
+            errorContainer.hidden = false;
+        }
+
+        if (result.execution_time !== undefined) {
+            timeElement.textContent =
+                `Execution time: ${Number(result.execution_time).toFixed(3)} s`;
+        }
+
+    } catch (error) {
+        statusElement.textContent = "Execution Failed";
+        errorElement.textContent =
+            error.message || "Unable to execute code.";
+        errorContainer.hidden = false;
+
+        console.error("Run Code error:", error);
+
+    } finally {
+        runButton.disabled = false;
+        runButton.textContent = "▶ Run Code";
+    }
+}
+
+
 function updateEditorPlaceholder() {
     const select = document.getElementById("language-select");
     const editor = document.getElementById("code-editor");
@@ -1130,13 +1219,47 @@ async function loadProblem() {
                     <div class="editor-toolbar">
                         <label for="language-select">Language</label>
                         <select id="language-select" aria-label="Programming language">
-                            <option value="1">C++17</option><option value="2">Java</option><option value="3">Python 3</option>
+                            <option value="1">C++17</option>
+                            <option value="2">Java</option>
+                            <option value="3">Python 3</option>
                         </select>
-                        <span class="editor-toolbar-spacer"></span><button type="button" class="editor-utility-button" id="copy-code-button">Copy code</button><button type="button" class="editor-utility-button" id="reset-code-button">Clear</button>
+
+                        <span class="editor-toolbar-spacer"></span>
+
+                        <button type="button" class="editor-utility-button" id="copy-code-button">Copy code</button>
+                        <button type="button" class="editor-utility-button" id="reset-code-button">Clear</button>
+                        <button type="button" class="editor-utility-button" id="run-code-button">▶ Run Code</button>
+                        <button type="button" id="submit-button">↑ Submit</button>
                     </div>
                     <div class="editor-surface"><div class="editor-surface-top"><span class="editor-file-dot"></span><span id="editor-language-label">C++17</span><span class="editor-file-extension">source</span></div><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Source code editor" placeholder="Write your solution here…"></textarea><div class="editor-footer"><span>Tip: Press Tab to indent</span><span>Plain text editor</span></div></div>
-                    <div class="submit-area"><p class="submit-note">Your solution will be checked against the test cases.</p><button id="submit-button" type="button"><span aria-hidden="true">↑</span> Submit solution</button></div>
-                    <div id="submission-message" class="submission-message" role="status" aria-live="polite"><span class="submission-status-icon" aria-hidden="true">i</span><span class="submission-message-copy"><strong>Ready to submit</strong><small>Your verdict will appear here after submission.</small></span></div>
+                    <div class="custom-input-section">
+                        <label for="custom-input">Custom Input</label>
+                        <textarea
+                            id="custom-input"
+                            rows="5"
+                            placeholder="Enter your input here..."
+                            spellcheck="false"
+                        ></textarea>
+                    </div>
+
+                    <div id="run-code-result" class="run-code-result" hidden>
+                        <div class="run-code-result-header">
+                            <strong id="run-code-status">Execution Result</strong>
+                            <span id="run-code-time"></span>
+                        </div>
+                        <div>
+                            <label>Output</label>
+                            <pre id="run-code-output"></pre>
+                        </div>
+                        <div id="run-code-error-container" hidden>
+                            <label>Error</label>
+                            <pre id="run-code-error"></pre>
+                        </div>
+                    </div>
+
+                    <div class="submit-area">
+                        <p class="submit-note">Your solution will be checked against the test cases.</p>
+                    </div>                    <div id="submission-message" class="submission-message" role="status" aria-live="polite"><span class="submission-status-icon" aria-hidden="true">i</span><span class="submission-message-copy"><strong>Ready to submit</strong><small>Your verdict will appear here after submission.</small></span></div>
                     <div class="editor-bottom-note"><span aria-hidden="true">⌁</span> Powered by the GrowCode execution engine</div>
                                 </aside>
             </div>
@@ -1202,7 +1325,12 @@ async function loadProblem() {
             </section>`;
 
         setupEditor();
-        document.getElementById("submit-button").addEventListener("click", () => submitSolution(problemId));
+
+        document.getElementById("run-code-button")
+            .addEventListener("click", runCode);
+        
+        document.getElementById("submit-button")
+            .addEventListener("click", () => submitSolution(problemId));
         // Initialize discussions.
         await checkDiscussionAuth();
         setupDiscussionEvents(problemId);
