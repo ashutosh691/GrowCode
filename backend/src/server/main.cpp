@@ -18,7 +18,14 @@
 // Command for find ip -  ipconfig getifaddr en0
 // Command for docker activity - docker events --filter type=container
 #include <iostream>
+#include <unordered_set>
+#include <regex>
+#include <algorithm>
 #include <sstream>
+#include<cmath>
+#include<unordered_map>
+#include<string>
+#include<vector>
 #include <nlohmann/json.hpp>
 #include <unordered_map>
 #include <mutex>
@@ -123,6 +130,168 @@ bool isAdmin(const httplib::Request& req,Database& database) {
     }
 
     return database.getUserRole(userId) == "ADMIN";
+}
+
+std::vector<std::string> sourceTokens(const std::string& source) {
+    std::string code = source;
+
+    // Remove block comments and line comments.
+    code = std::regex_replace(
+        code,
+        std::regex(R"(/\*[\s\S]*?\*/|//[^\n]*)"),
+        " "
+    );
+
+    // Remove preprocessor directives (includes, defines, etc.).
+    code = std::regex_replace(
+        code,
+        std::regex(R"(^\s*#.*$)", std::regex::multiline),
+        " "
+    );
+
+    // Remove common namespace boilerplate.
+    code = std::regex_replace(
+        code,
+        std::regex(R"(using\s+namespace\s+std\s*;)"),
+        " "
+    );
+
+    // Remove common main() entry-point signatures.
+    code = std::regex_replace(
+        code,
+        std::regex(
+            R"((int|signed|signed\s+int)\s+main\s*\([^)]*\)\s*\{)"
+        ),
+        " "
+    );
+
+    // Remove common fast-I/O boilerplate.
+    code = std::regex_replace(
+        code,
+        std::regex(
+            R"(ios\s*::\s*sync_with_stdio\s*\(\s*false\s*\)\s*;)"
+        ),
+        " "
+    );
+
+    code = std::regex_replace(
+        code,
+        std::regex(R"(cin\s*\.\s*tie\s*\(\s*(nullptr|0)\s*\)\s*;)"),
+        " "
+    );
+
+    // Remove common main() return statement.
+    code = std::regex_replace(
+        code,
+        std::regex(R"(return\s+0\s*;)"),
+        " "
+    );
+
+    // Remove common typedef/using aliases.
+    code = std::regex_replace(
+        code,
+        std::regex(R"(using\s+(ll|ull|vi|vl|pii|vll)\s*=\s*[^;]+;)"),
+        " "
+    );
+
+    // Tokenize identifiers and numeric literals.
+    std::regex tokenRegex(R"([A-Za-z_][A-Za-z0-9_]*|[0-9]+)");
+
+    std::vector<std::string> tokens;
+
+    auto begin = std::sregex_iterator(
+        code.begin(),
+        code.end(),
+        tokenRegex
+    );
+
+    auto end = std::sregex_iterator();
+
+    for (auto it = begin; it != end; ++it) {
+        std::string token = it->str();
+
+        // Ignore common standard-library boilerplate tokens.
+        if (token == "std" ||
+            token == "bits" ||
+            token == "include") {
+            continue;
+        }
+
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
+
+
+double tokenSimilarity(
+    const std::vector<std::string>& a,
+    const std::vector<std::string>& b
+) {
+    if (a.empty() || b.empty()) {
+        return 0.0;
+    }
+
+    // Frequency maps preserve repeated occurrences of tokens.
+    std::unordered_map<std::string, int> freqA;
+    std::unordered_map<std::string, int> freqB;
+
+    for (const auto& token : a) {
+        freqA[token]++;
+    }
+
+    for (const auto& token : b) {
+        freqB[token]++;
+    }
+
+    // Common language/setup tokens contribute less.
+    const std::unordered_set<std::string> commonTokens = {
+        "int", "long", "short", "char", "bool",
+        "void", "return", "if", "else",
+        "for", "while", "break", "continue",
+        "const", "static", "auto",
+        "true", "false", "nullptr"
+    };
+
+    auto weight = [&](const std::string& token) -> double {
+        if (commonTokens.count(token)) {
+            return 0.25;
+        }
+
+        return 1.0;
+    };
+
+    double dotProduct = 0.0;
+    double magnitudeA = 0.0;
+    double magnitudeB = 0.0;
+
+    for (const auto& [token, countA] : freqA) {
+        double w = weight(token);
+        double valueA = countA * w;
+
+        magnitudeA += valueA * valueA;
+
+        auto it = freqB.find(token);
+
+        if (it != freqB.end()) {
+            double valueB = it->second * w;
+            dotProduct += valueA * valueB;
+        }
+    }
+
+    for (const auto& [token, countB] : freqB) {
+        double w = weight(token);
+        double valueB = countB * w;
+
+        magnitudeB += valueB * valueB;
+    }
+
+    if (magnitudeA == 0.0 || magnitudeB == 0.0) {
+        return 0.0;
+    }
+
+    return dotProduct /
+        (std::sqrt(magnitudeA) * std::sqrt(magnitudeB));
 }
 
 int main() {
@@ -679,6 +848,348 @@ server.Get(R"(/api/problems/(\d+))",
         }
     );
 
+    // ---------------- ADMIN USER MANAGEMENT ----------------
+
+    server.Get("/api/admin/users",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            if (!isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            try {
+                std::string search = req.has_param("search")
+                    ? req.get_param_value("search") : "";
+
+                int limit = req.has_param("limit")
+                    ? std::stoi(req.get_param_value("limit")) : 50;
+
+                int offset = req.has_param("offset")
+                    ? std::stoi(req.get_param_value("offset")) : 0;
+
+                res.set_content(
+                    database.getAdminUsers(search, limit, offset).dump(),
+                    "application/json"
+                );
+            } catch (const std::exception& e) {
+                std::cerr << "[ADMIN USERS ERROR] "
+                          << e.what() << std::endl;
+            
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Failed to load admin users"})",
+                    "application/json"
+                );
+            }
+            catch (...) {
+                std::cerr << "[ADMIN USERS ERROR] Unknown exception"
+                          << std::endl;
+            
+                res.status = 500;
+                res.set_content(
+                    R"({"error":"Unknown admin users error"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+    server.Put(R"(/api/admin/users/(\d+)/status)",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            int adminId = 0;
+
+            if (!getUserIdFromSession(req, adminId) ||
+                !isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            try {
+                int targetId = std::stoi(req.matches[1].str());
+
+                if (targetId <= 0 || targetId == adminId) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid target. You cannot disable your own account."})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                auto body = nlohmann::json::parse(req.body);
+
+                if (!body.contains("active") ||
+                    !body["active"].is_boolean()) {
+                    res.status = 400;
+                    res.set_content(R"({"error":"active boolean required"})",
+                                    "application/json");
+                    return;
+                }
+
+                bool active = body["active"].get<bool>();
+
+                if (!database.setUserActive(targetId, active)) {
+                    res.status = 404;
+                    res.set_content(R"({"error":"User not found"})",
+                                    "application/json");
+                    return;
+                }
+
+                // Invalidate all sessions belonging to this account.
+                if (!active) {
+                    std::lock_guard<std::mutex> lock(sessionMutex);
+
+                    for (auto it = sessions.begin(); it != sessions.end();) {
+                        if (it->second == targetId) {
+                            it = sessions.erase(it);
+                        } else {
+                            ++it;
+                        }
+                    }
+                }
+
+                database.writeAdminAuditLog(
+                    adminId,
+                    active ? "USER_ENABLED" : "USER_DISABLED",
+                    targetId,
+                    nlohmann::json{{"active", active}}.dump(),
+                    req.remote_addr
+                );
+
+                res.set_content(
+                    nlohmann::json{
+                        {"message", active ? "Account enabled" : "Account disabled"}
+                    }.dump(),
+                    "application/json"
+                );
+            } catch (...) {
+                res.status = 400;
+                res.set_content(R"({"error":"Invalid request"})",
+                                "application/json");
+            }
+        }
+    );
+
+    server.Delete(R"(/api/admin/users/(\d+))",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            int adminId = 0;
+
+            if (!getUserIdFromSession(req, adminId) ||
+                !isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            try {
+                int targetId = std::stoi(req.matches[1].str());
+
+                if (targetId <= 0 || targetId == adminId) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"You cannot delete your own account"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                database.writeAdminAuditLog(
+                    adminId,
+                    "USER_DELETE_REQUESTED",
+                    targetId,
+                    R"({"operation":"account deletion"})",
+                    req.remote_addr
+                );
+
+                if (!database.deleteUserAccount(targetId)) {
+                    res.status = 404;
+                    res.set_content(R"({"error":"User not found"})",
+                                    "application/json");
+                    return;
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(sessionMutex);
+
+                    for (auto it = sessions.begin(); it != sessions.end();) {
+                        if (it->second == targetId) {
+                            it = sessions.erase(it);
+                        } else {
+                            ++it;
+                        }
+                    }
+                }
+
+                res.set_content(R"({"message":"User deleted"})",
+                                "application/json");
+            } catch (...) {
+                res.status = 400;
+                res.set_content(R"({"error":"Invalid user ID"})",
+                                "application/json");
+            }
+        }
+    );
+
+    server.Get(R"(/api/admin/users/(\d+)/submissions)",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            if (!isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            try {
+                int userId = std::stoi(req.matches[1].str());
+
+                int limit = req.has_param("limit")
+                    ? std::stoi(req.get_param_value("limit")) : 50;
+
+                int offset = req.has_param("offset")
+                    ? std::stoi(req.get_param_value("offset")) : 0;
+
+                res.set_content(
+                    database.getAdminUserSubmissions(userId, limit, offset).dump(),
+                    "application/json"
+                );
+            } catch (...) {
+                res.status = 400;
+                res.set_content(R"({"error":"Invalid request"})",
+                                "application/json");
+            }
+        }
+    );
+
+    server.Get(R"(/api/admin/submissions/(\d+))",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            if (!isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            try {
+                int submissionId = std::stoi(req.matches[1].str());
+                auto details = database.getAdminSubmissionDetails(submissionId);
+
+                if (!details.has_value()) {
+                    res.status = 404;
+                    res.set_content(R"({"error":"Submission not found"})",
+                                    "application/json");
+                    return;
+                }
+
+                res.set_content(details->dump(), "application/json");
+            } catch (...) {
+                res.status = 400;
+                res.set_content(R"({"error":"Invalid submission ID"})",
+                                "application/json");
+            }
+        }
+    );
+
+    // Admin-only AI review.
+    // Uses the existing ComplexityAnalyzer integration.
+    server.Post("/api/admin/ai-review",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            int adminId = 0;
+
+            if (!getUserIdFromSession(req, adminId) ||
+                !isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            try {
+                auto body = nlohmann::json::parse(req.body);
+
+                if (!body.contains("code") ||
+                    !body.contains("language_id") ||
+                    !body["code"].is_string() ||
+                    !body["language_id"].is_number_integer()) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"code and language_id are required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                std::string code = body["code"].get<std::string>();
+                int languageId = body["language_id"].get<int>();
+
+                if (code.empty() || code.size() > 50000) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Code must be between 1 and 50000 bytes"})",
+                        "application/json"
+                    );
+                    return;
+                }
+
+                const char* language =
+                    languageId == 1 ? "C++17" :
+                    languageId == 2 ? "Java" :
+                    languageId == 3 ? "Python 3" : nullptr;
+
+                if (!language) {
+                    res.status = 400;
+                    res.set_content(R"({"error":"Unsupported language"})",
+                                    "application/json");
+                    return;
+                }
+
+                auto review = ComplexityAnalyzer::analyze(
+                    code,
+                    language,
+                    "Admin source-code review. Assess correctness risks, "
+                    "readability, complexity and potential improvements. "
+                    "Do not claim this proves AI authorship or misconduct."
+                );
+
+                database.writeAdminAuditLog(
+                    adminId,
+                    "AI_CODE_REVIEW",
+                    0,
+                    R"({"review_type":"source_code"})",
+                    req.remote_addr
+                );
+
+                res.set_content(review.dump(), "application/json");
+            } catch (...) {
+                res.status = 503;
+                res.set_content(
+                    R"({"error":"AI review service unavailable"})",
+                    "application/json"
+                );
+            }
+        }
+    );
+
+    server.Get("/api/admin/audit",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            if (!isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+
+            res.set_content(
+                database.getAdminAuditLogs(100).dump(),
+                "application/json"
+            );
+        }
+    );
+
     server.Post("/api/login", [&](const httplib::Request& req, httplib::Response& res) {
         try {
             std::string username = req.get_param_value("username");
@@ -711,7 +1222,16 @@ server.Get(R"(/api/problems/(\d+))",
             
                 return;
             }
-    
+            
+            if (found && passwordValid && !database.isUserActive(userId)) {
+                res.status = 403;
+                res.set_content(
+                    R"({"error":"This account has been disabled"})",
+                    "application/json"
+                );
+                return;
+            }
+
             std::string sessionToken = generateSessionToken();
 
             {
@@ -1817,6 +2337,102 @@ server.Get(R"(/api/problems/(\d+))",
                     R"({"error":"Failed to delete reply"})",
                     "application/json"
                 );
+            }
+        }
+    );
+
+    server.Post("/api/admin/similarity",
+        [&](const httplib::Request& req, httplib::Response& res) {
+            if (!isAdmin(req, database)) {
+                res.status = 403;
+                res.set_content(R"({"error":"Admin access required"})",
+                                "application/json");
+                return;
+            }
+    
+            try {
+                auto body = nlohmann::json::parse(req.body);
+    
+                if (!body.contains("submission_id") ||
+                    !body["submission_id"].is_number_integer()) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"submission_id required"})",
+                        "application/json"
+                    );
+                    return;
+                }
+    
+                int targetId = body["submission_id"].get<int>();
+                auto target = database.getAdminSubmissionDetails(targetId);
+    
+                if (!target.has_value()) {
+                    res.status = 404;
+                    res.set_content(R"({"error":"Submission not found"})",
+                                    "application/json");
+                    return;
+                }
+    
+                auto targetTokens =
+                    sourceTokens((*target)["code"].get<std::string>());
+    
+                auto allSources = database.getAllSubmissionSources();
+                nlohmann::json matches = nlohmann::json::array();
+    
+                for (const auto& item : allSources) {
+                    int otherId = item["submission_id"].get<int>();
+                
+                    // Ignore the submission being analyzed.
+                    if (otherId == targetId) {
+                        continue;
+                    }
+                
+                    // Ignore submissions made by administrators.
+                    if (item["role"].get<std::string>() == "ADMIN") {
+                        continue;
+                    }
+                
+                    // Compare only submissions for the same problem.
+                    if (item["problem_id"] != (*target)["problem_id"]) {
+                        continue;
+                    }
+    
+                    auto otherTokens =
+                        sourceTokens(item["code"].get<std::string>());
+    
+                    double score = tokenSimilarity(targetTokens, otherTokens);
+    
+                    if (score >= 0.35) {
+                        matches.push_back({
+                            {"submission_id", otherId},
+                            {"user_id", item["user_id"]},
+                            {"similarity_percent", static_cast<int>(score * 100)}
+                        });
+                    }
+                }
+    
+                std::sort(
+                    matches.begin(),
+                    matches.end(),
+                    [](const nlohmann::json& a, const nlohmann::json& b) {
+                        return a["similarity_percent"].get<int>() >
+                               b["similarity_percent"].get<int>();
+                    }
+                );
+    
+                res.set_content(
+                    nlohmann::json{
+                        {"submission_id", targetId},
+                        {"matches", matches},
+                        {"warning",
+                         "Similarity is a heuristic signal, not proof of plagiarism."}
+                    }.dump(),
+                    "application/json"
+                );
+            } catch (...) {
+                res.status = 400;
+                res.set_content(R"({"error":"Similarity analysis failed"})",
+                                "application/json");
             }
         }
     );

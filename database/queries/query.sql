@@ -52,3 +52,34 @@ CREATE TABLE discussion_replies (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_replies_discussion (discussion_id)
 );
+
+
+
+
+
+
+
+
+USE growcode_app;
+
+ALTER TABLE users
+    ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    admin_user_id INT NULL,
+    action VARCHAR(100) NOT NULL,
+    target_user_id INT NULL,
+    details JSON NULL,
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_admin_audit_created (created_at),
+    INDEX idx_admin_audit_admin (admin_user_id),
+    INDEX idx_admin_audit_target (target_user_id),
+
+    CONSTRAINT fk_audit_admin
+        FOREIGN KEY (admin_user_id)
+        REFERENCES users(user_id)
+        ON DELETE SET NULL
+);

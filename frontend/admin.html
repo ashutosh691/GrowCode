@@ -1,173 +1,124 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GrowCode Admin Panel</title>
-    <link rel="stylesheet" href="/css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GrowCode Admin · Control Center</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="admin-page">
-    
-    <header class="navbar">
-        <a class="logo" href="/" aria-label="GrowCode home">GrowCode</a>
+  <header class="navbar admin-navbar">
+    <a class="logo" href="/" aria-label="GrowCode home">GrowCode</a>
+    <nav aria-label="Main navigation">
+      <a href="/">Problems</a><a href="/history.html">History</a><a href="/leaderboard.html">Leaderboard</a><a href="/admin.html" aria-current="page">Admin</a>
+      <a href="/register.html" id="register-link">
+          Register
+      </a>
 
-        <nav aria-label="Main navigation">
-            <a href="/">Problems</a>
-            <a href="/history.html">History</a>
-            <a href="/leaderboard.html">Leaderboard</a>
-            <a href="/admin.html" id="admin-link" aria-current="page" hidden>Admin</a>
-            <a href="/register.html" id="register-link" hidden>Register</a>
-            <a href="/login.html" id="auth-link">Login</a>
-        </nav>
-    </header>
+      <a href="/login.html" id="auth-link">
+          Login
+      </a>
+    </nav>
+  </header>
 
+  <main class="admin-shell">
+    <section class="admin-hero">
+      <div>
+        <p class="admin-eyebrow">GROWCODE · CONTROL CENTER</p>
+        <h1>Admin Dashboard</h1>
+        <p class="admin-subtitle">Manage coding problems and judge test cases from one workspace.</p>
+      </div>
+      <div class="admin-access" id="admin-status" aria-live="polite">
+        <span class="access-dot"></span><div><strong>Admin access</strong><p id="admin-message">Checking session…</p></div>
+      </div>
+    </section>
 
-    <main class="container admin-container">
-        <section class="admin-hero">
-            <div>
-                <p class="admin-eyebrow">GROWCODE • CONTROL CENTER</p>
-                <h1>Admin Dashboard</h1>
-                <p class="admin-subtitle">Create coding problems and manage their test cases.</p>
-            </div>
-            <div id="admin-status" class="admin-status-card">
-                <span class="admin-status-dot" aria-hidden="true"></span>
-                <div>
-                    <strong>Administrator access</strong>
-                    <p id="admin-message" role="status" aria-live="polite">Checking administrator access...</p>
-                </div>
-            </div>
-        </section>
+    <section class="admin-stats" aria-label="Dashboard statistics">
+      <article class="stat-card"><span class="stat-label">Total problems</span><strong id="stat-problems">—</strong><small>Available in GrowCode</small></article>
+      <article class="stat-card"><span class="stat-label">Easy</span><strong id="stat-easy">—</strong><small>Beginner-level challenges</small></article>
+      <article class="stat-card"><span class="stat-label">Medium</span><strong id="stat-medium">—</strong><small>Intermediate challenges</small></article>
+      <article class="stat-card"><span class="stat-label">Hard</span><strong id="stat-hard">—</strong><small>Advanced challenges</small></article>
+    </section>
 
-        <section class="admin-section admin-panel">
-            <div class="admin-section-heading">
-                <div>
-                    <span class="admin-step">01</span>
-                    <h2>Create New Problem</h2>
-                </div>
-                <p>Add a problem to the GrowCode judge.</p>
-            </div>
+    <section class="admin-panel" id="create-problem-panel">
+      <div class="panel-heading"><div><span class="section-number">01</span><div><h2>Create problem</h2><p>Add a coding challenge to the judge.</p></div></div><button class="text-button" type="button" data-toggle="problem-form">Collapse</button></div>
+      <form id="problem-form" class="admin-form">
+        <div class="field"><label for="title">Problem title *</label><input id="title" name="title" maxlength="200" placeholder="e.g. Two Sum" required></div>
+        <div class="field"><label for="difficulty">Difficulty *</label><select id="difficulty" name="difficulty"><option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option></select></div>
+        <div class="field field-wide"><label for="description">Problem statement *</label><textarea id="description" name="description" rows="5" placeholder="Explain the task, input and output format…" required></textarea></div>
+        <div class="field field-wide"><label for="constraints">Constraints</label><textarea id="constraints" name="constraints" rows="2" placeholder="e.g. 1 ≤ n ≤ 10⁵"></textarea></div>
+        <div class="field"><label for="expected-time-complexity">Expected time complexity *</label><input id="expected-time-complexity" name="expected_time_complexity" placeholder="O(n log n)" required></div>
+        <div class="field"><label for="expected-space-complexity">Expected space complexity *</label><input id="expected-space-complexity" name="expected_space_complexity" placeholder="O(n)" required></div>
+        <div class="field field-wide"><label for="recommended-algorithm">Recommended algorithm *</label><input id="recommended-algorithm" name="recommended_algorithm" placeholder="e.g. Hash Map" required></div>
+        <div class="form-actions field-wide"><button class="btn btn-primary" type="submit">Create problem</button><button class="btn btn-secondary" type="reset">Clear form</button><span id="problem-message" class="feedback" role="status"></span></div>
+      </form>
+    </section>
 
-            <form id="problem-form" class="admin-form">
-                <div class="admin-field admin-field-wide">
-                    <label for="title">Problem Title</label>
-                    <input type="text" id="title" name="title" placeholder="e.g. Sum of Two Numbers" required>
-                </div>
+    <section class="admin-panel" id="problem-management-panel">
+      <div class="panel-heading"><div><span class="section-number">02</span><div><h2>Problem management</h2><p>Search, filter, and manage your challenge library.</p></div></div><button id="refresh-problems" class="btn btn-secondary" type="button">Refresh</button></div>
+      <div class="problem-toolbar">
+        <div class="field search-field"><label for="problem-search">Search problems</label><input id="problem-search" type="search" placeholder="Search by title, ID, algorithm…"></div>
+        <div class="field"><label for="difficulty-filter">Difficulty</label><select id="difficulty-filter"><option value="ALL">All levels</option><option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option></select></div>
+        <div class="field"><label for="sort-problems">Sort by</label><select id="sort-problems"><option value="id-asc">ID: oldest first</option><option value="id-desc">ID: newest first</option><option value="title">Title A–Z</option></select></div>
+      </div>
+      <div class="list-meta"><span id="problem-count">Loading problems…</span><span>Cards have consistent size; details are expandable.</span></div>
+      <div id="problem-list" class="problem-grid" aria-live="polite"><div class="empty-state">Loading problem library…</div></div>
+    </section>
 
-                <div class="admin-field admin-field-wide">
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" placeholder="Describe the problem clearly..." rows="5" required></textarea>
-                </div>
+    <section class="admin-panel" id="test-case-panel">
+      <div class="panel-heading"><div><span class="section-number">03</span><div><h2>Test case manager</h2><p>Manage visible samples and hidden judge tests.</p></div></div></div>
+      <div class="selected-problem-banner"><span>Selected problem</span><strong id="selected-problem-label">None selected</strong><button type="button" id="clear-selected-problem" class="text-button">Clear</button></div>
+      <form id="test-case-form" class="admin-form">
+        <div class="field"><label for="problem-id">Problem ID *</label><input id="problem-id" name="problem_id" type="number" min="1" placeholder="Choose from a problem card" required></div>
+        <div class="field"><label for="order-no">Test case order *</label><input id="order-no" name="order_no" type="number" min="1" placeholder="1" required></div>
+        <div class="field"><label for="is-sample">Visibility *</label><select id="is-sample" name="is_sample"><option value="true">Sample — visible to users</option><option value="false">Hidden — judge only</option></select></div>
+        <div class="field field-wide"><label for="input">Input</label><textarea id="input" name="input" rows="4" placeholder="Test input (can be empty)"></textarea></div>
+        <div class="field field-wide"><label for="expected-output">Expected output *</label><textarea id="expected-output" name="expected_output" rows="4" placeholder="Exact expected output" required></textarea></div>
+        <div class="form-actions field-wide"><button class="btn btn-primary" type="submit">Add test case</button><button class="btn btn-secondary" type="reset">Clear fields</button><span id="test-case-message" class="feedback" role="status"></span></div>
+      </form>
+      <div id="test-case-list" class="test-case-list"><div class="empty-state">Select a problem to load its test cases.</div></div>
+    </section>
 
-                <div class="admin-field">
-                    <label for="difficulty">Difficulty</label>
-                    <select id="difficulty" name="difficulty" required>
-                        <option value="EASY">Easy</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HARD">Hard</option>
-                    </select>
-                </div>
+    <section class="admin-panel" id="user-management-panel">
+      <div class="panel-heading"><div><span class="section-number">04</span><div><h2>User management</h2><p>Search accounts, control access, and inspect user submissions.</p></div></div></div>
+      <div class="admin-toolbar">
+        <div class="field search-field"><label for="admin-user-search">Search users</label><input id="admin-user-search" type="search" placeholder="Name, username, or email"></div>
+        <button id="admin-user-search-btn" class="btn btn-primary" type="button">Search</button>
+        <button id="admin-user-refresh-btn" class="btn btn-secondary" type="button">Refresh</button>
+      </div>
+      <p id="admin-user-message" class="feedback" role="status"></p>
+      <div id="admin-users-list" class="admin-table-wrap"><div class="empty-state">Search for users to manage.</div></div>
+    </section>
 
-                <div class="admin-field admin-field-wide">
-                    <label for="constraints">Constraints <span class="optional-label">Optional</span></label>
-                    <textarea id="constraints" name="constraints" placeholder="e.g. 1 ≤ n ≤ 10⁵" rows="3"></textarea>
-                </div>
+    <section class="admin-panel" id="user-submissions-panel">
+      <div class="panel-heading"><div><span class="section-number">05</span><div><h2>User submissions</h2><p>Review submissions from a selected account.</p></div></div></div>
+      <p id="admin-submissions-user-label" class="muted">Select a user from User Management.</p>
+      <div id="admin-submissions-list" class="admin-table-wrap"><div class="empty-state">No user selected.</div></div>
+    </section>
 
-                <div class="admin-field">
-                    <label for="expected-time-complexity">Expected Time Complexity</label>
-                    <input type="text" id="expected-time-complexity" name="expected_time_complexity" placeholder="e.g. O(log N)" required>
-                </div>
+    <section class="admin-panel" id="code-review-panel">
+      <div class="panel-heading"><div><span class="section-number">06</span><div><h2>Code review & analysis</h2><p>Inspect source code, compare similarity, and request an AI review.</p></div></div></div>
+      <div id="admin-source-info" class="selected-problem-banner">Select a submission from the User Submissions section.</div>
+      <label class="admin-label" for="admin-source-code">Source code</label>
+      <textarea id="admin-source-code" class="admin-code" rows="16" readonly placeholder="Submission source code will appear here…"></textarea>
+      <div class="form-actions">
+        <button id="admin-similarity-btn" class="btn btn-primary" type="button" disabled>Check similarity</button>
+        <button id="admin-ai-review-btn" class="btn btn-secondary" type="button" disabled>AI code review</button>
+      </div>
+      <div id="admin-analysis-result" class="analysis-result" aria-live="polite">Analysis results will appear here.</div>
+      <p class="admin-disclaimer">Similarity and AI review are advisory signals only; they are not proof of plagiarism or AI authorship.</p>
+    </section>
 
-                <div class="admin-field">
-                    <label for="expected-space-complexity">Expected Space Complexity</label>
-                    <input type="text" id="expected-space-complexity" name="expected_space_complexity" placeholder="e.g. O(1)" required>
-                </div>
+    <section class="admin-panel" id="audit-panel">
+      <div class="panel-heading"><div><span class="section-number">07</span><div><h2>Admin activity log</h2><p>Review recent administrative actions.</p></div></div><button id="admin-audit-refresh" class="btn btn-secondary" type="button">Refresh logs</button></div>
+      <div id="admin-audit-list" class="admin-table-wrap"><div class="empty-state">Loading audit log…</div></div>
+    </section>
 
-                <div class="admin-field admin-field-wide">
-                    <label for="recommended-algorithm">Recommended Algorithm</label>
-                    <input type="text" id="recommended-algorithm" name="recommended_algorithm" placeholder="e.g. Binary Search" required>
-                </div>
-
-                <div class="admin-form-actions admin-field-wide">
-                    <button type="submit" class="admin-button admin-button-primary">Create Problem</button>
-                    <p id="problem-message" class="admin-feedback" role="status" aria-live="polite"></p>
-                </div>
-            </form>
-        </section>
-
-        <section class="admin-section admin-panel">
-            <div class="admin-section-heading">
-                <div>
-                    <span class="admin-step">02</span>
-                    <h2>Existing Problems</h2>
-                </div>
-                <p>Select a problem to manage its test cases.</p>
-            </div>
-            <div id="problem-list" class="admin-problem-list" aria-live="polite">
-                <p class="admin-muted">Loading problems...</p>
-            </div>
-        </section>
-
-        <section class="admin-section admin-panel">
-            <div class="admin-section-heading">
-                <div>
-                    <span class="admin-step">03</span>
-                    <h2>Test Cases</h2>
-                </div>
-                <p>Review the test cases for the selected problem.</p>
-            </div>
-            <div id="test-case-list" class="admin-test-case-list" aria-live="polite">
-                <p class="admin-muted">Select a problem to view its test cases.</p>
-            </div>
-        </section>
-
-        <section class="admin-section admin-panel">
-            <div class="admin-section-heading">
-                <div>
-                    <span class="admin-step">04</span>
-                    <h2>Add Test Case</h2>
-                </div>
-                <p>Define input and expected output for a problem.</p>
-            </div>
-
-            <form id="test-case-form" class="admin-form">
-                <div class="admin-field admin-field-wide">
-                    <label for="problem-id">Problem ID</label>
-                    <input type="number" id="problem-id" name="problem_id" placeholder="Select a problem above or enter its ID" min="1" required>
-                    <p class="admin-field-help">Use “Add Test Case” on a problem card to fill this automatically.</p>
-                </div>
-
-                <div class="admin-field">
-                    <label for="input">Input</label>
-                    <textarea id="input" name="input" placeholder="Enter test case input" rows="5"></textarea>
-                </div>
-
-                <div class="admin-field">
-                    <label for="expected-output">Expected Output</label>
-                    <textarea id="expected-output" name="expected_output" placeholder="Enter expected output" rows="5" required></textarea>
-                </div>
-
-                <div class="admin-field">
-                    <label for="is-sample">Sample Test Case</label>
-                    <select id="is-sample" name="is_sample">
-                        <option value="true">Yes — visible to users</option>
-                        <option value="false">No — hidden test</option>
-                    </select>
-                </div>
-
-                <div class="admin-field">
-                    <label for="order-no">Test Case Order</label>
-                    <input type="number" id="order-no" name="order_no" placeholder="e.g. 1" min="1" required>
-                </div>
-
-                <div class="admin-form-actions admin-field-wide">
-                    <button type="submit" class="admin-button admin-button-primary">Add Test Case</button>
-                    <p id="test-case-message" class="admin-feedback" role="status" aria-live="polite"></p>
-                </div>
-            </form>
-        </section>
-    </main>
-
-    <script src="/js/admin.js" defer></script>
-    <script src="/js/auth.js" defer></script>
+    <footer class="admin-footer">GrowCode Admin · Changes affect the live problem library. Confirm destructive actions carefully.</footer>
+  </main>
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+  <script src="/js/admin.js" defer></script>
+  <script src="/js/auth.js" defer></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 #include"database/Database.h"  //Includes the Database class declaration
 #include<iostream> //Used for printing messages
+#include<algorithm>
 #include<mysqlx/xdevapi.h> //MySQL library used to connect to the database
 #include <nlohmann/json.hpp>
 
@@ -1723,6 +1724,309 @@ bool Database::deleteDiscussionReply(
     }
     catch (const std::exception& e) {
         std::cerr << "Delete reply error: "
+                  << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+
+nlohmann::json Database::getAdminUsers(
+    const std::string& search,
+    int limit,
+    int offset
+) {
+    mysqlx::Session session(host, port, username, password);
+    session.sql("USE " + database).execute();
+
+    limit = std::max(1, std::min(limit, 100));
+    offset = std::max(0, offset);
+
+    std::string pattern = "%" + search + "%";
+
+    auto result = session.sql(
+        "SELECT u.user_id, u.name, u.username, u.email, "
+        "u.role, u.is_active, "
+        "DATE_FORMAT(u.created_at, '%Y-%m-%d %H:%i:%s') AS created_at, "
+        "COUNT(DISTINCT s.submission_id) AS submissions "
+        "FROM users u "
+        "LEFT JOIN submissions s ON s.user_id = u.user_id "
+        "WHERE u.username LIKE ? OR u.name LIKE ? OR u.email LIKE ? "
+        "GROUP BY u.user_id, u.name, u.username, u.email, "
+        "u.role, u.is_active, u.created_at "
+        "ORDER BY u.user_id DESC "
+        "LIMIT ? OFFSET ?"
+    ).bind(pattern, pattern, pattern, limit, offset).execute();
+
+    nlohmann::json users = nlohmann::json::array();
+
+    for (auto row : result.fetchAll()) {
+        users.push_back({
+            {"user_id", row[0].get<int>()},
+            {"name", row[1].get<std::string>()},
+            {"username", row[2].get<std::string>()},
+            {"email", row[3].get<std::string>()},
+            {"role", row[4].get<std::string>()},
+            {"is_active", row[5].get<bool>()},
+            {"created_at", row[6].get<std::string>()},
+            {"submission_count", row[7].get<int>()}
+        });
+    }
+
+    return users;
+}
+
+bool Database::setUserActive(int userId, bool active) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "UPDATE users SET is_active = ? WHERE user_id = ?"
+        ).bind(active, userId).execute();
+
+        return result.getAffectedItemsCount() > 0;
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr << "setUserActive failed: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool Database::deleteUserAccount(int userId) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "DELETE FROM users WHERE user_id = ?"
+        ).bind(userId).execute();
+
+        return result.getAffectedItemsCount() > 0;
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr << "deleteUserAccount failed: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+nlohmann::json Database::getAdminUserSubmissions(
+    int userId,
+    int limit,
+    int offset
+) {
+    mysqlx::Session session(host, port, username, password);
+    session.sql("USE " + database).execute();
+
+    limit = std::max(1, std::min(limit, 100));
+    offset = std::max(0, offset);
+
+    auto result = session.sql(
+        "SELECT s.submission_id, s.problem_id, p.title, "
+        "s.language_id, l.name, s.status, "
+        "DATE_FORMAT(s.submitted_at, '%Y-%m-%d %H:%i:%s') AS submitted_at "
+        "FROM submissions s "
+        "JOIN problems p ON p.problem_id = s.problem_id "
+        "JOIN languages l ON l.language_id = s.language_id "
+        "WHERE s.user_id = ? "
+        "ORDER BY s.submitted_at DESC "
+        "LIMIT ? OFFSET ?"
+    ).bind(userId, limit, offset).execute();
+
+    nlohmann::json submissions = nlohmann::json::array();
+
+    for (auto row : result.fetchAll()) {
+        submissions.push_back({
+            {"submission_id", row[0].get<int>()},
+            {"problem_id", row[1].get<int>()},
+            {"problem_title", row[2].get<std::string>()},
+            {"language_id", row[3].get<int>()},
+            {"language", row[4].get<std::string>()},
+            {"status", row[5].get<std::string>()},
+            {"submitted_at", row[6].get<std::string>()}
+        });
+    }
+
+    return submissions;
+}
+
+std::optional<nlohmann::json>
+Database::getAdminSubmissionDetails(int submissionId) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "SELECT s.submission_id, s.user_id, u.username, "
+            "s.problem_id, p.title, s.language_id, l.name, "
+            "s.status, "
+            "DATE_FORMAT(s.submitted_at, '%Y-%m-%d %H:%i:%s') AS submitted_at, "
+            "s.code "
+            "FROM submissions s "
+            "JOIN users u ON u.user_id = s.user_id "
+            "JOIN problems p ON p.problem_id = s.problem_id "
+            "JOIN languages l ON l.language_id = s.language_id "
+            "WHERE s.submission_id = ?"
+        ).bind(submissionId).execute();
+
+        auto row = result.fetchOne();
+
+        if (row.isNull()) {
+            return std::nullopt;
+        }
+
+        return nlohmann::json{
+            {"submission_id", row[0].get<int>()},
+            {"user_id", row[1].get<int>()},
+            {"username", row[2].get<std::string>()},
+            {"problem_id", row[3].get<int>()},
+            {"problem_title", row[4].get<std::string>()},
+            {"language_id", row[5].get<int>()},
+            {"language", row[6].get<std::string>()},
+            {"status", row[7].get<std::string>()},
+            {"submitted_at", row[8].get<std::string>()},
+            {"code", row[9].get<std::string>()}
+        };
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr << "getAdminSubmissionDetails failed: "
+                  << e.what() << std::endl;
+        return std::nullopt;
+    }
+}
+
+nlohmann::json Database::getAllSubmissionSources() {
+    mysqlx::Session session(host, port, username, password);
+    session.sql("USE " + database).execute();
+
+    auto result = session.sql(
+        "SELECT s.submission_id, s.user_id, s.problem_id, "
+        "s.language_id, s.status, s.code, s.submitted_at, u.role "
+        "FROM submissions s "
+        "JOIN users u ON s.user_id = u.user_id "
+        "ORDER BY s.submitted_at DESC "
+        "LIMIT 1000"
+    ).execute();
+
+    nlohmann::json rows = nlohmann::json::array();
+
+    for (auto row : result.fetchAll()) {
+        rows.push_back({
+            {"submission_id", row[0].get<int>()},
+            {"user_id", row[1].get<int>()},
+            {"problem_id", row[2].get<int>()},
+            {"language_id", row[3].get<int>()},
+            {"status", row[4].get<std::string>()},
+            {"code", row[5].get<std::string>()},
+            {"submitted_at", row[6].get<std::string>()},
+            {"role", row[7].get<std::string>()}
+        });
+    }
+
+    return rows;
+}
+
+bool Database::writeAdminAuditLog(
+    int adminUserId,
+    const std::string& action,
+    int targetUserId,
+    const std::string& details,
+    const std::string& ipAddress
+) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        session.sql(
+            "INSERT INTO admin_audit_log "
+            "(admin_user_id, action, target_user_id, details, ip_address) "
+            "VALUES (?, ?, ?, ?, ?)"
+        ).bind(
+            adminUserId,
+            action,
+            targetUserId,
+            details,
+            ipAddress
+        ).execute();
+
+        return true;
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr << "Audit log write failed: "
+                  << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+nlohmann::json Database::getAdminAuditLogs(int limit) {
+    mysqlx::Session session(host, port, username, password);
+    session.sql("USE " + database).execute();
+
+    limit = std::max(1, std::min(limit, 200));
+
+    auto result = session.sql(
+        "SELECT audit_id, admin_user_id, action, target_user_id, "
+        "CAST(details AS CHAR) AS details_text, ip_address, "
+        "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at "
+        "FROM admin_audit_log "
+        "ORDER BY created_at DESC "
+        "LIMIT ?"
+    ).bind(limit).execute();
+
+    nlohmann::json logs = nlohmann::json::array();
+
+    for (auto row : result.fetchAll()) {
+        nlohmann::json details = nullptr;
+
+        if (!row[4].isNull()) {
+            std::string detailsText = row[4].get<std::string>();
+
+            try {
+                details = nlohmann::json::parse(detailsText);
+            } catch (...) {
+                details = detailsText;
+            }
+        }
+
+        logs.push_back({
+            {"audit_id", row[0].get<long long>()},
+            {"admin_user_id", row[1].isNull()
+                ? nlohmann::json(nullptr)
+                : nlohmann::json(row[1].get<int>())},
+            {"action", row[2].get<std::string>()},
+            {"target_user_id", row[3].isNull()
+                ? nlohmann::json(nullptr)
+                : nlohmann::json(row[3].get<int>())},
+            {"details", details},
+            {"ip_address", row[5].isNull()
+                ? nlohmann::json(nullptr)
+                : nlohmann::json(row[5].get<std::string>())},
+            {"created_at", row[6].get<std::string>()}
+        });
+    }
+
+    return logs;
+}
+
+
+
+
+bool Database::isUserActive(int userId) {
+    try {
+        mysqlx::Session session(host, port, username, password);
+        session.sql("USE " + database).execute();
+
+        auto result = session.sql(
+            "SELECT is_active FROM users WHERE user_id = ?"
+        ).bind(userId).execute();
+
+        auto row = result.fetchOne();
+
+        return !row.isNull() && row[0].get<bool>();
+    }
+    catch (const mysqlx::Error& e) {
+        std::cerr << "isUserActive failed: "
                   << e.what() << std::endl;
         return false;
     }

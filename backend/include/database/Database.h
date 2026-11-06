@@ -146,6 +146,41 @@ public:
             const std::string& content);
 
         bool deleteDiscussionReply(int userId, int replyId);
+
+        // Admin: user management
+        nlohmann::json getAdminUsers(
+            const std::string& search,
+            int limit,
+            int offset
+        );
+
+        bool setUserActive(int userId, bool active);
+
+        bool deleteUserAccount(int userId);
+
+        nlohmann::json getAdminUserSubmissions(
+            int userId,
+            int limit,
+            int offset
+        );
+
+        std::optional<nlohmann::json> getAdminSubmissionDetails(
+            int submissionId
+        );
+
+        nlohmann::json getAllSubmissionSources();
+
+        bool writeAdminAuditLog(
+            int adminUserId,
+            const std::string& action,
+            int targetUserId,
+            const std::string& details,
+            const std::string& ipAddress
+        );
+
+        nlohmann::json getAdminAuditLogs(int limit);
+
+        bool isUserActive(int userId);
 };
 
 #endif
