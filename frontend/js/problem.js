@@ -373,7 +373,7 @@ async function runCode() {
 
     const code = editor.value;
     const languageId = Number(languageSelect.value);
-    const input = inputField.value;
+    const customInput = inputField.value;
 
     if (!code.trim()) {
         alert("Write your code before running it.");
@@ -397,46 +397,144 @@ async function runCode() {
     errorContainer.hidden = true;
 
     try {
-        const response = await fetch("/api/run", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                code: code,
-                language_id: languageId,
-                input: input
-            })
-        });
+        const problemId = new URLSearchParams(window.location.search).get("id");
 
-        const result = await response.json();
+        const problemResponse = await fetch(
+            `/api/problems/${encodeURIComponent(problemId)}`
+        );
 
-        if (!response.ok) {
-            throw new Error(result.error || "Code execution request failed.");
+        if (!problemResponse.ok) {
+            throw new Error("Unable to retrieve sample test cases.");
         }
 
-        statusElement.textContent =
-            String(result.status || "UNKNOWN").replaceAll("_", " ");
+        const problem = await problemResponse.json();
+        const samples = Array.isArray(problem.sample_test_cases)
+            ? problem.sample_test_cases
+            : [];
 
-        outputElement.textContent = result.output ?? "";
+        const useCustomInput = customInput.trim().length > 0;
 
-        if (result.error) {
-            errorElement.textContent = result.error;
+        const testCases = useCustomInput
+            ? [{
+                input: customInput,
+                expected_output: null,
+                label: "Custom Input"
+            }]
+            : samples.map((sample, index) => ({
+                input: sample.input ?? "",
+                expected_output: sample.expected_output ?? "",
+                label: `Sample Test Case ${index + 1}`
+            }));
+
+        if (testCases.length === 0) {
+            throw new Error(
+                "No sample test cases available. Enter custom input to run your code."
+            );
+        }
+
+        let totalTime = 0;
+        let passedCount = 0;
+        const results = [];
+
+        for (const testCase of testCases) {
+            const response = await fetch("/api/run", {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    code,
+                    language_id: languageId,
+                    input: testCase.input
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.error || "Code execution request failed."
+                );
+            }
+
+            totalTime += Number(result.execution_time || 0);
+
+            const actualOutput = String(result.output ?? "");
+            const expectedOutput = testCase.expected_output;
+
+            const normalizeOutput = value =>
+                String(value ?? "")
+                    .trim()
+                    .split(/\s+/)
+                    .join(" ");
+
+            const passed = useCustomInput
+                ? result.status === "SUCCESS"
+                : result.status === "SUCCESS" &&
+                  normalizeOutput(actualOutput) ===
+                  normalizeOutput(expectedOutput);
+
+            if (passed) {
+                passedCount++;
+            }
+
+            results.push({
+                label: testCase.label,
+                input: testCase.input,
+                expected: expectedOutput,
+                actual: actualOutput,
+                status: result.status,
+                passed,
+                error: result.error || ""
+            });
+        }
+
+        statusElement.textContent = useCustomInput
+            ? results[0].status.replaceAll("_", " ")
+            : `${passedCount} / ${testCases.length} Sample Tests Passed`;
+
+        timeElement.textContent =
+            `Total execution time: ${totalTime.toFixed(3)} s`;
+
+        outputElement.textContent = results.map(result => {
+            if (useCustomInput) {
+                return result.actual || "(No output)";
+            }
+
+            return [
+                `${result.label}: ${result.passed ? "PASSED" : "FAILED"}`,
+                "",
+                "Input:",
+                result.input || "(empty)",
+                "",
+                "Expected Output:",
+                result.expected || "(empty)",
+                "",
+                "Your Output:",
+                result.actual || "(empty)",
+                result.error ? `\nError:\n${result.error}` : ""
+            ].join("\n");
+        }).join("\n\n--------------------\n\n");
+
+        const failures = results.filter(result =>
+            !result.passed && result.error
+        );
+
+        if (failures.length > 0) {
+            errorElement.textContent = failures
+                .map(result => `${result.label}: ${result.error}`)
+                .join("\n\n");
+
             errorContainer.hidden = false;
-        }
-
-        if (result.execution_time !== undefined) {
-            timeElement.textContent =
-                `Execution time: ${Number(result.execution_time).toFixed(3)} s`;
         }
 
     } catch (error) {
         statusElement.textContent = "Execution Failed";
         errorElement.textContent =
             error.message || "Unable to execute code.";
-        errorContainer.hidden = false;
 
+        errorContainer.hidden = false;
         console.error("Run Code error:", error);
 
     } finally {
